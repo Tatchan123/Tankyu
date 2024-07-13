@@ -29,24 +29,54 @@ train_size = x_train[0]
 max_interaction = 2000
 print(x_train)
 a = "aaaa"
+
+
 class Fit: #7
     pass
+
 
 
 class Network: #6
     pass
 
 
+
 class Optimizer: #5
     pass
 
 
-class Relu: #2
-    pass
+
+class Relu:                   #　x入力はバッチ全体の画像データ [[画像2]、[画像4],[画像10],・・・
+    def __init__ (self):
+        self.mask = None
+    
+    def forward(self,x):
+        self.mask = (x <= 0)   #ゼロ以下かどうか
+        out = x.copy()
+        out[self.mask] = 0     #Trueの項目を0にしているらしい
+        return out
+    
+    def bacward(self,dout):
+        dout[self.mask] = 0    #負なら入力値0だから微分値もゼロ、正だと入力＝出力  だと思う・・・
+        dx = dout
+        return dout
+
 
 
 class Affine: #3
-    pass
+    def __init__ (self,W,b):
+        self.W = W
+        self.b = b
+        self.x = None
+        self.ori_x_shape = None
+        self.dW = None
+        self.db = None
+        
+    def forward(self,x):
+        self.ori_x_shape = x.shape
+        self.x = x.reshape(x.shape[0],-1)   #　xの次元を反転　ん難解********要確認
+        
+        
 
 
 class Softmax_Loss: #4
