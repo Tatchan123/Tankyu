@@ -1,10 +1,14 @@
 
 
 """
-Class Network 
+class Fit
+    バッチ作成、学習の進行 ()-()  optimizerはこちらです(Networkじゃない) ←わかりにくくなったら変える
+class Trainer 
     学習、重み計算 ()-()
-class Optimizer
+class Optimizer          長くなりすぎたらわんちゃん消すかも
     最適化 ()-()
+
+
 class Relu
     relu順伝播、逆伝播 ()-()
 class Affine
@@ -31,22 +35,67 @@ print(x_train)
 a = "aaaa"
 
 
-class Fit: #7
+class Trainer: #7
     pass
 
 
 
-class Network: #6
-    pass
+class Network:
+    """
+    バッチファイル受け取り
+    predict(順伝播)
+    loss(損失関数)
+    gradient(逆伝播)
+    
+    実行順・・・gradient(loss(predict))a
+
+    accuracyは別枠ってかんじでsry    
+    """
+    def __init__ (self, input_size, output_size, layer_size, weight_init, activation="relu"):
+        self.input_size = input_size
+        self.output_size = output_size
+        self.layer_size = layer_size
+        self.layer_n = len(self.layer_size)
+        self.params = {}
+        
+        #重み初期化
+        wi = weight_init() #クラスのアドレス持って来るつもり（呼び出し元からそのまま持ってくる）
+        self.params = wi.weight_initialization(self.input_size, self.layer_size, self.output_size) #一応クラス引き継げそうな感じ 呼び出し確認よろ
+        
+        #レイヤ初期化
+        self.activation = activation
+        self.layers = OrderedDict()
+        for idx in range(1, self.layer_n+1):
+            self.layers["Affine"+str(idx)] = Affine(self.params["W"+str(idx)],  self.params["b" + str(idx)])
+            self.layers["Activation"] = self.activation()
+        
+        idx = self.layer_n + 1        #最終層は上の層と同じくaffine,biasは持つが、reluではなく祖父とマックスなので別で
+        self.layers["Affine"+str(idx)] = Affine(self.params["W"+str(idx)],  self.params["b" + str(idx)])
+        self.last_layer = Softmax_Loss()
+    
+    def gradient(self,x,t):
+        """
+        勾配の算出 呼び出し後loss→predict
+        x:入力データ t:正解ラベル
+        """
+        self.loss(x,t) #損失関数自体はいらないので返り血はうけとらない  各層通過時にレイヤのインスタンスにアクティベーションと重みが保存されるのでそれでok
+        
 
 
 
-class Optimizer: #5
-    pass
 
 
 
-class Relu:                   #　x入力はバッチ全体の画像データ [[画像2]、[画像4],[画像10],・・・
+
+
+
+
+"""
+   以下レイヤーのクラス めんどいので直に書いた  
+   x入力はバッチ全体の画像データ [[画像2]、[画像4],[画像10],・・・
+"""
+
+class Relu:                   
     def __init__ (self):
         self.mask = None
     
@@ -68,16 +117,54 @@ class Affine: #3
         self.W = W
         self.b = b
         self.x = None
-        self.ori_x_shape = None
         self.dW = None
         self.db = None
         
     def forward(self,x):
-        self.ori_x_shape = x.shape
-        self.x = x.reshape(x.shape[0],-1)   #　xの次元を反転　ん難解********要確認
-        
-        
+       self.x = x
+       out = np.dot(x,self.W) + self.b
+       return out
+    
+    def backward(self,dout):
+        self.dW = np.dot(self.x.T , dout)
+        self.db = np.sum(dout , axis=0)
+        dx = np.dot(dout,self.W.T)
+        return dx
+
 
 
 class Softmax_Loss: #4
-    pass
+    def __init__ (self):
+        self.loss = None
+        self.y = None
+        self.t = None
+        
+    def forward(self, x ,t):
+        self.t = t
+        if self.y.ndim == 1:
+            y = self.y.reshape(1,y.size)
+            t = self.t.reshape(1,t.size)
+        t = t.argmax(axis=1)
+        batch_size = y.shape[0]
+        self.loss =  -np.sum(np.log(y[np.arange(self.batch_size),t]+1e-7)) / self.batch_size
+        return self.loss
+    
+    def backward(self,dout=1):
+        batch_size = self.t.shape[0]
+        dx = (self.y - self.t) / batch_size
+        return batch_size
+        
+        
+        
+    # def entropy_error(self,y,t):           交差エントロピー 多分上のミスってるから一応 残しておく
+    #     if y.ndim == 1:
+    #         t = t.reshape(1,t.size)
+    #         y = y.reshape(1,y.size)　　　　13日ここまで~
+            
+    #     if t.size == y.size:
+    #         t = t.argmax(axis=1)
+            
+    #     self.batch_size = y.shape[0]
+    #     return -np.sum(np.log(y[np.arange(self.batch_size),t]+1e-7)) / self.batch_size
+            
+        
