@@ -56,3 +56,7 @@ class SGD:
 
 """
 (x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
+
+
+layer1 = [100,100,100]
+trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.01, check=10)
