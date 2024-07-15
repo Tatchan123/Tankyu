@@ -94,7 +94,10 @@ def _change_one_hot_label(X):
 
 
 def load_mnist(normalize=True, flatten=True, one_hot_label=False):
-    """
+    """MNISTデータセットの読み込み
+
+    Parameters
+    ----------
     normalize : 画像のピクセル値を0.0~1.0に正規化する
     one_hot_label :
         one_hot_labelがTrueの場合、ラベルはone-hot配列として返す
