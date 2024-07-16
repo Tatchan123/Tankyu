@@ -106,8 +106,8 @@ class Network:
         self.backward()
             
         grads = {}
-        for idx in range(1, self.layer_size+2):
-            grads["w"+str(idx)] = self.layers["Affine"+str(idx)].dW
+        for idx in range(1, self.layer_n+2):
+            grads["W"+str(idx)] = self.layers["Affine"+str(idx)].dW
             grads["b"+str(idx)] = self.layers["Affine"+str(idx)].db
         
         return grads
@@ -132,7 +132,7 @@ class Network:
         """
         正確性を求める  多分使わん    作りたかっただけ
         """
-        y = self.predict(x,self.params)
+        y = self.predict(x,t)
         y = np.argmax(y,axis=1)
         if t.ndim != 1 :  t = np.argmax(t, axis=1)     #大発見 こんな書き方できるのか
         accuracy = np.sum(y==t) / float(x.shape[0])
@@ -167,7 +167,7 @@ class Relu:
         out[self.mask] = 0     #Trueの項目を0にしているらしい
         return out
     
-    def bacward(self,dout,params):
+    def backward(self,dout,params):
         dout[self.mask] = 0    #負なら入力値0だから微分値もゼロ、正だと入力＝出力  だと思う・・・
         dx = dout
         return dx

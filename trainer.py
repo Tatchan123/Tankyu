@@ -44,12 +44,13 @@ class SGD:
                 self.params[key] -= self.lr*grads[key]
             
             if cnt == self.check:
+                cnt = 0
                 tmp = self.model.accuracy(x_train,t_train)
                 self.train_acc.append(tmp)
                 print("epoch:",str(i)," | ",str(tmp))
-                
-                
-                               
+            cnt += 1
+        print("acc changes:   ",self.train_acc)
+
 
 """
 以下実行系      
@@ -59,5 +60,5 @@ class SGD:
 
 
 layer1 = [100,100,100]
-trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.01, check=10)
+trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=200, lr=0.05, check=10)
 trial1.fit()
