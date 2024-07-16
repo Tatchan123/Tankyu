@@ -13,7 +13,7 @@ class Relu
     relu順伝播、逆伝播 ()-()
 class Affine
     全結合層順伝播、逆伝播 ()-()
-class Softmax_Loss
+class SoftmaxLoss
     損失関数とソフトマックスの順伝播逆伝播()-()
 class ImportMnist
     データセット「Mnist」の読み込み (別ファイルでやればよかったな)←別ファイルにしたぞ
@@ -86,7 +86,7 @@ class Network:
         
         idx = self.layer_n + 1        #最終層は上の層と同じくaffine,biasは持つが、reluではなく祖父とマックスなので別で
         self.layers["Affine"+str(idx)] = Affine(idx)
-        self.last_layer = Softmax_Loss()
+        self.last_layer = SoftmaxLoss()
     
     
     
@@ -126,7 +126,7 @@ class Network:
         layers.reverse()
         
         for layer in layers:
-            dout = layer.backward(dout,self.prams)
+            dout = layer.backward(dout,self.params)
     
     def accuracy(self,x,t):
         """
@@ -193,36 +193,52 @@ class Affine: #3
         b = params["b"+str(self.idx)]
         self.dW = np.dot(self.x.T , dout)
         self.db = np.sum(dout , axis=0)
-        dx = np.dot(dout,self.W.T)
+        dx = np.dot(dout,w.T)
         return dx
 
 
 """
 以下大事故
 """
-class Softmax_Loss: #4
-    def __init__ (self):
+class SoftmaxLoss:
+    def __init__(self):
         self.loss = None
-        self.y = None
-        self.t = None
-        
-    def forward(self, x ,t):
+        self.y = None # softmaxの出力
+        self.t = None # 教師データ
+
+    def forward(self, x, t):
         self.t = t
-        if self.y.ndim == 1:
-            y = self.y.reshape(1,y.size)
-            t = self.t.reshape(1,t.size)
-        t = t.argmax(axis=1)
-        batch_size = y.shape[0]
-        self.loss =  -np.sum(np.log(y[np.arange(self.batch_size),t]+1e-7)) / self.batch_size
+        self.y = self.softmax(x)
+        self.loss = self.cross_entropy_error(self.y, self.t)
+        
         return self.loss
-    
-    def backward(self,dout=1):
+
+    def backward(self, dout=1):
         batch_size = self.t.shape[0]
-        dx = (self.y - self.t) / batch_size
-        return batch_size
+        if self.t.size == self.y.size: # 教師データがone-hot-vectorの場合
+            dx = (self.y - self.t) / batch_size
+        else:
+            dx = self.y.copy()
+            dx[np.arange(batch_size), self.t] -= 1
+            dx = dx / batch_size
         
+        return dx
         
-        
+    def softmax(self,x):
+        x = x - np.max(x, axis=-1, keepdims=True)   # オーバーフロー対策
+        return np.exp(x) / np.sum(np.exp(x), axis=-1, keepdims=True)
+
+    def cross_entropy_error(self, y, t):
+        if y.ndim == 1:
+            t = t.reshape(1, t.size)
+            y = y.reshape(1, y.size)
+         
+    # 教師データがone-hot-vectorの場合、正解ラベルのインデックスに変換
+        if t.size == y.size:
+            t = t.argmax(axis=1)
+             
+        batch_size = y.shape[0]
+        return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
     # def entropy_error(self,y,t):           交差エントロピー 多分上のミスってるから一応 残しておく
     #     if y.ndim == 1:
     #         t = t.reshape(1,t.size)
