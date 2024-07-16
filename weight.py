@@ -1,5 +1,7 @@
 import numpy as np
 class He:
+    def __init__(self):
+        self.params = {}
     def weight_initialization(self, inp, layer, out):
         all_layer = [inp] + layer + [out]
         

@@ -25,7 +25,6 @@ class ImportMnist
 import numpy as np
 from collections import OrderedDict
 import sys, os
-from load import load_mnist
 #from weight import *
 # from optimize import* # type: ignore
 
@@ -113,10 +112,10 @@ class Network:
         
         return grads
         
-    def predict(self,y,t):
+    def predict(self,x,t):
         for layer in self.layers.values():
             x = layer.forward(x,self.params)
-        y = self.last_layer.forward(y,t) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
+        y = self.last_layer.forward(x,t) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
             
         return(x)
     
