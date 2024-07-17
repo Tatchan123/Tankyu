@@ -58,7 +58,8 @@ class SGD:
 """
 (x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
 
+print("start")
 
 layer1 = [100,100,100]
-trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=200, lr=0.05, check=10)
+trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=300, batch_size=100, lr=0.04, check=10)
 trial1.fit()
