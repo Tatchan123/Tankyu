@@ -138,7 +138,10 @@ class Network:
         accuracy = np.sum(y==t) / float(x.shape[0])
         return accuracy
 
-
+    def cal_loss(self,x,t,params):
+        self.params = params
+        loss = self.predict(x,t)
+        return self.last_layer.forward(loss,t)
 
 
 
