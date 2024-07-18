@@ -1,9 +1,14 @@
-import numpy as np
+import gpu
+if gpu.Use_Gpu:
+    import cupy as np
+else:
+    import numpy as np
+    
 from collections import OrderedDict
 from data.load import load_mnist
 from model1 import *
 from weight import *
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
 
 
 class SGD:
@@ -68,14 +73,48 @@ trial1 = SGD(layer=layer1, weightinit=He, data_n=100, max_epoch=100, batch_size=
 trial1.fit()
 
 # Wの動きを観察してみよう
-param_key = 2
 params = trial1.params
-new_params = params
-w_changes = []
-loss_changes = []
-for i in np.arange(-1,1,0.1):
-    print(i)
-    w_changes.append(i)
-    new_params["W"+str(param_key)][1] = params["W"+str(param_key)][1] + i
-    loss_changes.append(trial1.model.cal_loss(x_train,t_train,new_params))
-print(loss_changes)
+
+def get_loss(param_key,base_neuron,forward_neuron,w_changes):
+    new_params = params
+    loss_changes = np.array([])
+    for i in w_changes:
+      print(i)
+      new_params["W"+str(param_key)][base_neuron][forward_neuron] = params["W"+str(param_key)][base_neuron][forward_neuron] + i
+      loss_changes = np.append(loss_changes,trial1.model.cal_loss(x_train,t_train,new_params))
+    return(loss_changes)
+
+x = np.arange(-5,5,0.5)
+fig = plt.figure()
+
+ax1 = fig.add_subplot(2, 2, 1)
+ax2 = fig.add_subplot(2, 2, 2)
+ax3 = fig.add_subplot(2, 2, 3)
+ax4 = fig.add_subplot(2, 2, 4)
+
+loss1 = get_loss(1,1,1,x)
+loss2 = get_loss(2,1,1,x)
+loss3 = get_loss(3,1,1,x)
+loss4 = get_loss(4,1,1,x)
+
+if gpu.Use_Gpu:
+    x = np.ndarray.get(x)
+    loss1,loss2,loss3,loss4 = np.ndarray.get(loss1),np.ndarray.get(loss2),np.ndarray.get(loss3),np.ndarray.get(loss4)
+
+ax1.plot(x,loss1)
+ax1.set_title("1")
+
+
+ax2.plot(x,loss2)
+ax2.set_title("2")
+
+
+ax3.plot(x,loss3)
+ax3.set_title("3")
+
+
+ax4.plot(x,loss4)
+ax4.set_title("4")
+
+plt.show()
+print("finish")

@@ -1,4 +1,9 @@
-import numpy as np
+import gpu
+if gpu.Use_Gpu:
+    import cupy as np
+else:
+    import numpy as np
+    
 class He:
     def __init__(self):
         self.params = {}

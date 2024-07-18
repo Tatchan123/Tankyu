@@ -1,4 +1,10 @@
 # coding: utf-8
+import gpu
+if gpu.Use_Gpu:
+    import cupy as np
+else:
+    import numpy as np
+    
 try:
     import urllib.request
 except ImportError:
@@ -7,7 +13,7 @@ import os.path
 import gzip
 import pickle
 import os
-import numpy as np
+
 
 
 #url_base = 'http://yann.lecun.com/exdb/mnist/'

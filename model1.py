@@ -22,9 +22,13 @@ class ImportMnist
 """
 
 
-import numpy as np
+import gpu
+if gpu.Use_Gpu:
+    import cupy as np
+else:
+    import numpy as np
+    
 from collections import OrderedDict
-import sys, os
 #from weight import *
 # from optimize import* # type: ignore
 
