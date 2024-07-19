@@ -69,7 +69,7 @@ print("start")
 
 
 layer1 = [100,100,100]
-trial1 = SGD(layer=layer1, weightinit=He, data_n=100, max_epoch=100, batch_size=100, lr=0.03, check=10)
+trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.03, check=10)
 trial1.fit()
 
 # Wの動きを観察してみよう
@@ -80,8 +80,9 @@ def get_loss(param_key,base_neuron,forward_neuron,w_changes):
     loss_changes = np.array([])
     for i in w_changes:
       print(i)
+      trial1.model.updateparams(new_params)
       new_params["W"+str(param_key)][base_neuron][forward_neuron] = params["W"+str(param_key)][base_neuron][forward_neuron] + i
-      loss_changes = np.append(loss_changes,trial1.model.cal_loss(x_train,t_train,new_params))
+      loss_changes = np.append(loss_changes,trial1.model.cal_loss(x_train,t_train))
     return(loss_changes)
 
 x = np.arange(-5,5,0.5)
