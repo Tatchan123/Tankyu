@@ -10,6 +10,7 @@ from model1 import *
 from weight import *
 import matplotlib.pyplot as plt
 import tqdm
+import copy
 
 
 class SGD:
@@ -70,58 +71,61 @@ print("start")
 
 
 layer1 = [100,100,100]
-trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=250, batch_size=100, lr=0.03, check=10)
+trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
 trial1.fit()
-print(trial1.params)
+#print(trial1.params)
 
 # Wの動きを観察してみよう
-params = trial1.params
+params = copy.deepcopy(trial1.params)
 
-def get_loss(param_key,base_neuron,forward_neuron,w_changes):
-    new_params = params
+def get_loss(param_key,base_neuron,forward_neuron,w_changes,function):
+    new_params = copy.deepcopy(params)
     loss_changes = np.array([])
-    for i in tqdm.tqdm(w_changes):
-      np.pi*np.pi
-      new_params["W"+str(param_key)][base_neuron][forward_neuron] = params["W"+str(param_key)][base_neuron][forward_neuron] + i
+    for i in w_changes:
+      new_params["W"+str(param_key)][base_neuron][forward_neuron] = params["W"+str(param_key)][base_neuron][forward_neuron].copy() + i
       trial1.model.updateparams(new_params)
-      loss_changes = np.append(loss_changes,trial1.model.cal_loss(x_train,t_train))
+      loss_changes = np.append(loss_changes,eval("trial1.model."+function+"(x_train,t_train)"))
+    #   print(params["W"+str(param_key)][base_neuron][forward_neuron])
+    #   print(new_params["W"+str(param_key)][base_neuron][forward_neuron])
     return(loss_changes)
 
-def plt_save(name,base,forward):
-    x = np.arange(-0,1,0.01)
+def plt_save(name,base,forward,function,xx):
     fig = plt.figure()
-
+    w_changes = xx
     ax1 = fig.add_subplot(2, 2, 1)
     ax2 = fig.add_subplot(2, 2, 2)
     ax3 = fig.add_subplot(2, 2, 3)
     ax4 = fig.add_subplot(2, 2, 4)
 
-    loss1 = get_loss(1,base,forward,x)
-    loss2 = get_loss(2,base,forward,x)
-    loss3 = get_loss(3,base,forward,x)
-    loss4 = get_loss(4,base,forward,x)
+    loss1 = get_loss(1,base,forward,w_changes,function)
+    loss2 = get_loss(2,base,forward,w_changes,function)
+    loss3 = get_loss(3,base,forward,w_changes,function)
+    loss4 = get_loss(4,base,forward,w_changes,function)
     
     if gpu.Use_Gpu:
-        x = np.ndarray.get(x)
+        w_changes = np.ndarray.get(w_changes)
         loss1,loss2,loss3,loss4 = np.ndarray.get(loss1),np.ndarray.get(loss2),np.ndarray.get(loss3),np.ndarray.get(loss4)
 
-    ax1.plot(x,loss1)
+    ax1.plot(w_changes,loss1)
     ax1.set_title("1")
 
 
-    ax2.plot(x,loss2)
+    ax2.plot(w_changes,loss2)
     ax2.set_title("2")
 
 
-    ax3.plot(x,loss3)
+    ax3.plot(w_changes,loss3)
     ax3.set_title("3")
 
 
-    ax4.plot(x,loss4)
+    ax4.plot(w_changes,loss4)
     ax4.set_title("4")
     
-    plt.savefig("image/0-1-0.01/"+name+".png")    
+    plt.savefig("image/copy/"+name+".png")    
     
-for i in range(2,8):
-    plt_save("test"+str(i),i,i)
+for i in tqdm.tqdm(range(0,10)):
+    x = np.arange(-1,1,0.02)
+    plt_save(str(i)+"accuracy",i,i,"accuracy",x)
+    x = np.arange(-1,1,0.02)
+    plt_save(str(i)+"loss",i,i,"cal_loss",x)
 print("finish")
