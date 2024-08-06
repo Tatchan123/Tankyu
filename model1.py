@@ -107,23 +107,37 @@ class Network:
             dout = layer.backward(dout,self.params)
 
 
-    def rmw(self,idx,x,epsilon,complement):
+    def rmw(self, idx, x, epsilon, complement):
         """
         idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
-        epsilon:分散がこの値より小さいときニューロンを結合する float
+        epsilon:分散がこの値より小さいときニューロンを結合する float?
         complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
         """
         out = Affine(idx).testward(self,x,self.params)
-        for i in range(0,len(out[0])):    #全パターン試すためのfor i,for j
+        rmlist = []
+        for i in range(0,len(out[0])):    # 全パターン試すためのfor i,for j
             for j in range(i+1,len(out[0])):
                 diff = out[0][i] - out[0][j]
-                for k in range(1,len(out)): #バッチ全部の差をとるためのfor k
+                for k in range(1,len(out)): # バッチ全部の差をとるためのfor k
                     diff = np.append(diff,out[k][i] - out[k][j])
-                disp = np.average((diff ** 2)) - np.average(diff) ** 2
-                #2乗の平均 - 平均の2乗
+                disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
+                #分散 = 2乗の平均 - 平均の2乗
                 if disp <= epsilon:
-                    pass #ここで詰んだ
-    
+                    rmlist.append(j)
+        
+        for i in range(0,len(rmlist)):
+            for j in range(i+1,len(rmlist)):
+                if rmlist[i] == rmlist[j]:
+                    rmlist = np.delete(rmlist,j,axis=0)
+        
+        if complement:
+            pass # 工事中 一旦スルーで
+        else:
+            self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+            self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx)],rmlist,axis=1)
+        
+        return self.params["W"+str(idx)], self.params["W"+str(idx-1)]
+
     def accuracy(self,x,t):
         """
         正確性を求める  多分使わん    作りたかっただけ

@@ -57,7 +57,60 @@ class SGD:
                 self.train_acc.append(tmp)
                 print("epoch:",str(i)," | ",str(tmp))
             cnt += 1
-#        print("acc changes:   ",self.train_acc)
+
+
+
+class CpSGD:
+    """
+    epsilon,complement: Network.rmw参照
+    cp: 特徴量比較して結合する作業をやる回数
+    """
+    def __init__(self, layer, weightinit, data_n, max_epoch, batch_size, lr, check, epsilon, complement, cp):
+        
+        self.layer = layer
+        self.data_n = data_n
+        self.x_train = x_train[:self.data_n]
+        self.x_test = x_test[:self.data_n]
+        self.max_epoch = max_epoch
+        self.batch_size = batch_size
+        self.lr = lr
+        self.check = check
+        self.epsilon = epsilon
+        self.complement = complement
+        self.cp = cp
+        
+        wi = weightinit()
+        self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
+        
+        self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu)
+        
+        self.train_acc = []
+        
+    def fit(self):
+        cnt = 0
+        for j in range(self.cp):
+            for i in range(self.max_epoch):
+                batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
+                x_batch = x_train[batch_mask]
+                t_batch = t_train[batch_mask]
+                
+                grads = self.model.gradient(x_batch, t_batch, self.params)      
+                for key in self.params.keys():
+                    self.params[key] -= self.lr*grads[key]
+                
+                if cnt == self.check:
+                    cnt = 0
+                    tmp = self.model.accuracy(x_train,t_train)
+                    self.train_acc.append(tmp)
+                    print("epoch:",str(i)," | ",str(tmp))
+                cnt += 1
+            for idx in range(1,len(self.layer)+1):
+                self.params["W"+str(idx)], self.params["W"+str(idx-1)] = self.model.rmw(self, idx, x_train, self.epsilon, self.complement)
+
+
+
+
+
 
 
 """
@@ -71,9 +124,18 @@ print("start")
 
 
 layer1 = [100,100,100]
-trial1 = SGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
+# trial1 = SGD(layer=layer1, weightinit=Rows, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
+# trial1.fit()
+
+trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10, epsilon=5, complement=False, cp=5)
 trial1.fit()
-#print(trial1.params)
+
+
+
+
+
+
+
 
 # Wの動きを観察してみよう
 params = copy.deepcopy(trial1.params)
@@ -123,9 +185,9 @@ def plt_save(name,base,forward,function,xx):
     
     plt.savefig("image/copy/"+name+".png")    
     
-for i in tqdm.tqdm(range(0,10)):
-    x = np.arange(-1,1,0.02)
-    plt_save(str(i)+"accuracy",i,i,"accuracy",x)
-    x = np.arange(-1,1,0.02)
-    plt_save(str(i)+"loss",i,i,"cal_loss",x)
+# for i in tqdm.tqdm(range(0,2)):
+#     # x = np.arange(-1,1,0.05)
+#     # plt_save(str(i)+"accuracy",i,i,"accuracy",x)
+#     x = np.arange(-1,1,0.05)
+#     plt_save(str(i)+"loss",i,i,"cal_loss",x)
 print("finish")
