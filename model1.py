@@ -29,31 +29,6 @@ else:
     import numpy as np
     
 from collections import OrderedDict
-#from weight import *
-# from optimize import* # type: ignore
-
-# (x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
-
-
-
-# class Trainer: #7
-#     def __init__(self,layer,weightinit,data_n,max_epoch,optimizer,batch_size):
-#         self.train_size = x_train.shape[0]                     #全体の画像の数
-#         self.model = Network(input_size=784, output_size=10, layer_size=layer, weight_init=weightinit)
-#         self.x_train = x_train[:data_n]
-#         self.x_test = x_test[:data_n]
-#         self.max_epoch = max_epoch
-#         self.optimizer = optimizer
-#         self.batch_size = batch_size
-        
-#     def fit(self):
-#         for i in range(self.max_epoch):
-#             batch_mask = np.random.choice(self.train_size,self.batch_size)                   #14日ここまで バッチの作成をoptimizerに含めるかをめっちゃ迷った 必要になってからでもいいかも（多分すぐ必要になる）
-#             x_batch = x_train[batch_mask]
-#             t_batch = t_train[batch_mask]
-            
-#             grads = self.model.gradient(x_batch,t_batch)
-#             self.model.params = self.optimizer.update(self.model.params,grads)
 
 
 
@@ -120,7 +95,6 @@ class Network:
         for layer in self.layers.values():
             x = layer.forward(x,self.params)
         y = self.last_layer.forward(x,t) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
-            
         return(x)
     
     def backward(self):
@@ -131,6 +105,24 @@ class Network:
         
         for layer in layers:
             dout = layer.backward(dout,self.params)
+
+
+    def rmw(self,idx,x,epsilon,complement):
+        """
+        idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
+        epsilon:分散がこの値より小さいときニューロンを結合する float
+        complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
+        """
+        out = Affine(idx).testward(self,x,self.params)
+        for i in range(0,len(out[0])):    #全パターン試すためのfor i,for j
+            for j in range(i+1,len(out[0])):
+                diff = out[0][i] - out[0][j]
+                for k in range(1,len(out)): #バッチ全部の差をとるためのfor k
+                    diff = np.append(diff,out[k][i] - out[k][j])
+                disp = np.average((diff ** 2)) - np.average(diff) ** 2
+                #2乗の平均 - 平均の2乗
+                if disp <= epsilon:
+                    pass #ここで詰んだ
     
     def accuracy(self,x,t):
         """
@@ -178,6 +170,17 @@ class Relu:
         dx = dout
         return dx
 
+class Identity: #恒等関数(y=x)
+    def __init__(self):
+        pass
+    def forward(self,x,params):
+        out = x.copy()
+        return out
+    
+    def backward(self,dout,params):
+        dx = dout
+        return dx
+
 
 
 class Affine: #3
@@ -193,6 +196,23 @@ class Affine: #3
        b = params["b"+str(self.idx)]
        out = np.dot(x,w) + b
        return out
+    
+    def testward(self,x,params):
+        self.x = x
+        w = params["W"+str(self.idx)]
+        
+        for i in range(0,len(x)):
+            row = np.multiply(x[i][0],w[0])
+            for j in range(1,len(x[i])):
+                row = np.vstack([row,np.multiply(x[i][j],w[j])])
+            
+            if i == 0:
+                out = [row]
+            else:
+                out = np.append(out,[row],axis=0)
+        return out.T
+
+
     
     def backward(self,dout,params):
         w = params["W"+str(self.idx)]
