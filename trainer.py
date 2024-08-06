@@ -110,6 +110,52 @@ class CpSGD:
 
 
 
+class Adam:
+    def __init__(self, layer, weightinit, data_n, max_epoch, batch_size, lr, check, decreace1, decreace2):
+        
+        self.data_n = data_n
+        self.x_train = x_train[:self.data_n]
+        self.x_test = x_test[:self.data_n]
+        self.max_epoch = max_epoch
+        self.batch_size = batch_size
+        self.lr = lr
+        self.check = check
+        self.decreace1 = decreace1
+        self.decreace2 = decreace2
+        
+        wi = weightinit()
+        self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
+        
+        self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu)
+        
+        self.train_acc = []
+        
+    def fit(self):
+        cnt = 0
+        self.m,self.v = {},{}
+        for k,v in self.params.items():
+            self.m[k] = np.zeros_like(v)
+            self.v[k] = np.zeros_like(v)
+            
+        for i in range(self.max_epoch):
+            batch_mask = np.random.choice(self.data_n,self.batch_size,self.params)
+            x_batch = x_train[batch_mask]
+            t_batch = t_train[batch_mask]
+            grads = self.model.gradient(x_batch, t_batch, self.params)
+
+            crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
+            
+            for key in self.params.keys():
+                self.m[key] += (1-self.decreace1) * (grads[key]-self.m[key])
+                self.v[key] += (1-self.decreace2) * (grads[key]**2-self.v[key])
+                self.params[key] -= crt_lr * self.m[key] / (np.sqrt(self.v[key]) +1e-7)
+                
+            if cnt == self.check:
+                cnt = 0
+                tmp = self.model.accuracy(x_train,t_train)
+                self.train_acc.append(tmp)
+                print("epoch:",str(i)," | ",str(tmp))
+            cnt += 1
 
 
 
@@ -130,6 +176,9 @@ layer1 = [100,100,100]
 
 trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10, epsilon=3, complement=False, cp=5)
 trial1.fit()
+
+trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
+trial2.fit()
 
 
 
