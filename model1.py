@@ -115,7 +115,7 @@ class Network:
         """
         out = Affine(idx).testward(x,self.params)
         rmlist = []
-        for i in range(0,len(out[0])-1):    # 全パターン試すためのfor i,for j
+        for i in range(0,len(out[0])-1):# 全パターン試すためのfor i,for j            
             for j in range(i+1,len(out[0])):
                 diff = out[0][i] - out[0][j]
                 for k in range(1,len(out)): # バッチ全部の差をとるためのfor k
@@ -213,18 +213,11 @@ class Affine: #3
        return out
     
     def testward(self,x,params):
-        self.x = x
         w = params["W"+str(self.idx)]
-        
-        for i in range(0,len(x)):
-            row = np.multiply(x[i][0],w[0])
-            for j in range(1,len(x[i])):
-                row = np.vstack([row,np.multiply(x[i][j],w[j])])
-            
-            if i == 0:
-                out = [row]
-            else:
-                out = np.append(out,[row],axis=0)
+        out = [x[0].reshape(len(x[0]),-1)*w]
+        for i in x[1:]:
+            xx = x.reshape(len(i),-1)
+            out = np.vstack([out,[xx*w]])
         return out.T
 
 
@@ -280,15 +273,4 @@ class SoftmaxLoss:
              
         batch_size = y.shape[0]
         return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
-    # def entropy_error(self,y,t):           交差エントロピー 多分上のミスってるから一応 残しておく
-    #     if y.ndim == 1:
-    #         t = t.reshape(1,t.size)
-    #         y = y.reshape(1,y.size)　　　　13日ここまで~
-            
-    #     if t.size == y.size:
-    #         t = t.argmax(axis=1)
-            
-    #     self.batch_size = y.shape[0]
-    #     return -np.sum(np.log(y[np.arange(self.batch_size),t]+1e-7)) / self.batch_size
-            
         
