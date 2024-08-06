@@ -94,6 +94,7 @@ class CpSGD:
                 x_batch = x_train[batch_mask]
                 t_batch = t_train[batch_mask]
                 
+                
                 grads = self.model.gradient(x_batch, t_batch, self.params)      
                 for key in self.params.keys():
                     self.params[key] -= self.lr*grads[key]
@@ -104,8 +105,8 @@ class CpSGD:
                     self.train_acc.append(tmp)
                     print("epoch:",str(i)," | ",str(tmp))
                 cnt += 1
-            for idx in range(1,len(self.layer)+1):
-                self.params["W"+str(idx)], self.params["W"+str(idx-1)] = self.model.rmw(self, idx, x_train, self.epsilon, self.complement)
+            for idx in range(2,len(self.layer)+1):
+                self.params["W"+str(idx)], self.params["W"+str(idx-1)] = self.model.rmw(idx, x_batch, self.epsilon, self.complement)
 
 
 
@@ -127,7 +128,7 @@ layer1 = [100,100,100]
 # trial1 = SGD(layer=layer1, weightinit=Rows, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
 # trial1.fit()
 
-trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10, epsilon=5, complement=False, cp=5)
+trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10, epsilon=3, complement=False, cp=5)
 trial1.fit()
 
 

@@ -113,9 +113,9 @@ class Network:
         epsilon:分散がこの値より小さいときニューロンを結合する float?
         complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
         """
-        out = Affine(idx).testward(self,x,self.params)
+        out = Affine(idx).testward(x,self.params)
         rmlist = []
-        for i in range(0,len(out[0])):    # 全パターン試すためのfor i,for j
+        for i in range(0,len(out[0])-1):    # 全パターン試すためのfor i,for j
             for j in range(i+1,len(out[0])):
                 diff = out[0][i] - out[0][j]
                 for k in range(1,len(out)): # バッチ全部の差をとるためのfor k
@@ -127,8 +127,9 @@ class Network:
         
         for i in range(0,len(rmlist)):
             for j in range(i+1,len(rmlist)):
-                if rmlist[i] == rmlist[j]:
+                if rmlist[i] == rmlist[j-1]:
                     rmlist = np.delete(rmlist,j,axis=0)
+        print(rmlist)
         
         if complement:
             pass # 工事中 一旦スルーで
