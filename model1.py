@@ -115,22 +115,18 @@ class Network:
         """
         out = Affine(idx).testward(x,self.params)
         rmlist = []
-        for i in range(0,len(out[0])-1):# 全パターン試すためのfor i,for j            
-            for j in range(i+1,len(out[0])):
-                diff = out[0][i] - out[0][j]
-                for k in range(1,len(out)): # バッチ全部の差をとるためのfor k
-                    diff = np.append(diff,out[k][i] - out[k][j])
+        for i in range(0,len(out)-2):# 全パターン試すためのfor i,for j                    
+            for j in range(i+1,len(out-1)):
+                diff = out[i] - out[j]
                 disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
                 #分散 = 2乗の平均 - 平均の2乗
                 if disp <= epsilon:
-                    rmlist.append(j)
+                    print(i,j,disp)
+                    rmlist = np.append(rmlist,i)
+                    rmlist = rmlist.astype('int32')
+                    break
         
-        for i in range(0,len(rmlist)):
-            for j in range(i+1,len(rmlist)):
-                if rmlist[i] == rmlist[j-1]:
-                    rmlist = np.delete(rmlist,j,axis=0)
-        print(rmlist)
-        
+        print(type(rmlist),rmlist)
         if complement:
             pass # 工事中 一旦スルーで
         else:
@@ -214,11 +210,14 @@ class Affine: #3
     
     def testward(self,x,params):
         w = params["W"+str(self.idx)]
-        out = [x[0].reshape(len(x[0]),-1)*w]
-        for i in x[1:]:
-            xx = x.reshape(len(i),-1)
-            out = np.vstack([out,[xx*w]])
-        return out.T
+        out = []
+        for i in x:
+            y = (i.reshape(-1,1))*w
+            out.append(y)
+        out = np.array(out)
+        out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
+        print(out.shape)
+        return out
 
 
     
