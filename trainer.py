@@ -82,7 +82,7 @@ class CpSGD:
         wi = weightinit()
         self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
         
-        self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu)
+        self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu, toba=True)
         
         self.train_acc = []
         
@@ -105,8 +105,10 @@ class CpSGD:
                     self.train_acc.append(tmp)
                     print("epoch:",str(i)," | ",str(tmp))
                 cnt += 1
-            for idx in range(2,len(self.layer)+1):
-                self.params["W"+str(idx)], self.params["W"+str(idx-1)] = self.model.rmw(idx, x_batch, self.epsilon, self.complement)
+            
+            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
+            # for idx in range(1,len(self.layer)+1):
+            #     self.params["W"+str(idx)], self.params["W"+str(idx-1)] = self.model.rmw(idx, x_batch, self.epsilon, self.complement)
 
 
 
@@ -174,11 +176,11 @@ layer1 = [100,100,100]
 # trial1 = SGD(layer=layer1, weightinit=Rows, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
 # trial1.fit()
 
-trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10, epsilon=3, complement=False, cp=5)
+trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=40, batch_size=200, lr=0.04, check=10, epsilon=1e-5, complement=False, cp=5)
 trial1.fit()
 
-trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
-trial2.fit()
+# trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
+# trial2.fit()
 
 
 

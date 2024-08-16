@@ -32,6 +32,85 @@ from collections import OrderedDict
 
 
 
+class Toba:
+    def __init__(self):
+        self.init_remove = []
+        print("aiueoaiueo")
+        
+        
+    def rmw(self, x, params, layer, epsilon, complement=False):
+        """
+        idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
+        epsilon:分散がこの値より小さいときニューロンを結合する float?
+        complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
+        """
+        self.params = params
+        x = self.forward(x,self.params)
+        for idx in range(1,len(layer)+2):
+            
+            w = self.params["W"+str(idx)]
+            out = []
+            for i in x:
+                y = (i.reshape(-1,1))*w
+                out.append(y)
+            out = np.array(out)
+            out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
+            rmlist = np.array([])
+            
+            for i in range(0,len(out)-2):# 全パターン試すためのfor i,for j                    
+                   for j in range(i+1,len(out-1)):
+                    diff = out[i] - out[j]
+                    disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
+                 #分散 = 2乗の平均 - 平均の2乗
+                    if disp <= epsilon:
+                        print(i,j,disp)
+                        rmlist = np.append(rmlist,i)
+                        break
+            rmlist = rmlist.astype('int32')       
+            
+            
+            print(x.shape)
+            print(params["W"+str(idx)].shape)
+            
+            print(params["b"+str(idx)])
+            if idx == 1:
+                self.init_remove.append(rmlist)
+                print(type(rmlist),rmlist)
+                if complement:
+                    pass # 工事中 一旦スルーで
+                else:
+                    self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+            else:
+                print(type(rmlist),rmlist)
+                if complement:
+                    pass # 工事中 一旦スルーで
+                else:
+                    self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+                    self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
+                    self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)                   
+            
+            
+            x = np.delete(x,rmlist,1)
+            
+            tmp = params["W"+str(idx)]
+            print(x.shape)
+            print(tmp.shape)
+            x = np.dot(x,tmp) + params["b"+str(idx)]
+            print(x.shape)
+            print(params["b"+str(idx)].shape)
+                
+        return self.params
+    
+    def forward(self,x,params):
+        if not self.init_remove==[]:
+            for i in self.init_remove:
+                x = np.delete(x,i,0)
+        return x
+            
+    def backward(self,dout,params):
+        pass
+
+
 class Network:
     """
     バッチファイル受け取り
@@ -39,16 +118,14 @@ class Network:
     loss(損失関数)
     gradient(逆伝播)
     
-    実行順・・・gradient(loss(predict))a
-
-    accuracyは別枠ってかんじでsry    
     """
-    def __init__ (self, input_size, output_size, layer_size, params, activation="relu"):
+    def __init__ (self, input_size, output_size, layer_size, params, activation="relu", toba=False):
         self.input_size = input_size
         self.output_size = output_size
         self.layer_size = layer_size
         self.layer_n = len(self.layer_size)
         self.params = params
+        self.rmlist = []
         
         #重み初期化
         """
@@ -59,6 +136,8 @@ class Network:
         #レイヤ初期化
         self.activation = activation
         self.layers = OrderedDict()
+        if toba:
+            self.layers["toba"] = Toba()
         for idx in range(1, self.layer_n+1):
             self.layers["Affine"+str(idx)] = Affine(idx)
             self.layers["Activation"+str(idx)] = self.activation()
@@ -107,33 +186,34 @@ class Network:
             dout = layer.backward(dout,self.params)
 
 
-    def rmw(self, idx, x, epsilon, complement):
-        """
-        idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
-        epsilon:分散がこの値より小さいときニューロンを結合する float?
-        complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
-        """
-        out = Affine(idx).testward(x,self.params)
-        rmlist = []
-        for i in range(0,len(out)-2):# 全パターン試すためのfor i,for j                    
-            for j in range(i+1,len(out-1)):
-                diff = out[i] - out[j]
-                disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
-                #分散 = 2乗の平均 - 平均の2乗
-                if disp <= epsilon:
-                    print(i,j,disp)
-                    rmlist = np.append(rmlist,i)
-                    rmlist = rmlist.astype('int32')
-                    break
+
+    # def rmw(self, idx, x, epsilon, complement=False):
+    #     """
+    #     idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
+    #     epsilon:分散がこの値より小さいときニューロンを結合する float?
+    #     complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
+    #     """
+    #     out = Affine(idx).testward(x,self.params)
+    #     rmlist = []
+    #     for i in range(0,len(out)-2):# 全パターン試すためのfor i,for j                    
+    #         for j in range(i+1,len(out-1)):
+    #             diff = out[i] - out[j]
+    #             disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
+    #             #分散 = 2乗の平均 - 平均の2乗
+    #             if disp <= epsilon:
+    #                 print(i,j,disp)
+    #                 rmlist = np.append(rmlist,i)
+    #                 rmlist = rmlist.astype('int32')
+    #                 break
         
-        print(type(rmlist),rmlist)
-        if complement:
-            pass # 工事中 一旦スルーで
-        else:
-            self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-            self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx)],rmlist,axis=1)
+    #     print(type(rmlist),rmlist)
+    #     if complement:
+    #         pass # 工事中 一旦スルーで
+    #     else:
+    #         self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+    #         self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx)],rmlist,axis=1)
         
-        return self.params["W"+str(idx)], self.params["W"+str(idx-1)]
+    #     return self.params["W"+str(idx)], self.params["W"+str(idx-1)]
 
     def accuracy(self,x,t):
         """
@@ -166,6 +246,9 @@ class Network:
    x入力はバッチ全体の画像データ [[画像2]、[画像4],[画像10],・・・
 """
 
+
+
+
 class Relu:                   
     def __init__ (self):
         self.mask = None
@@ -191,6 +274,7 @@ class Identity: #恒等関数(y=x)
     def backward(self,dout,params):
         dx = dout
         return dx
+    
 
 
 
@@ -205,20 +289,21 @@ class Affine: #3
        self.x = x
        w = params["W"+str(self.idx)]
        b = params["b"+str(self.idx)]
+       print(x.shape)
+       print(w.shape)
        out = np.dot(x,w) + b
        return out
     
-    def testward(self,x,params):
-        w = params["W"+str(self.idx)]
-        out = []
-        for i in x:
-            y = (i.reshape(-1,1))*w
-            out.append(y)
-        out = np.array(out)
-        out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
-        print(out.shape)
-        return out
-
+    # def testward(self,x,params):
+    #     w = params["W"+str(self.idx)]
+    #     out = []
+    #     for i in x:
+    #         y = (i.reshape(-1,1))*w
+    #         out.append(y)
+    #     out = np.array(out)
+    #     out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
+    #     print(out.shape)
+    #     return out
 
     
     def backward(self,dout,params):
