@@ -47,7 +47,7 @@ class Toba:
         self.params = params
         x = self.forward(x,self.params)
         for idx in range(1,len(layer)+2):
-            
+            print(idx)
             w = self.params["W"+str(idx)]
             out = []
             for i in x:
@@ -62,29 +62,24 @@ class Toba:
                     diff = out[i] - out[j]
                     disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
                  #分散 = 2乗の平均 - 平均の2乗
-                    if disp <= epsilon:
-                        print(i,j,disp)
+                    #print(disp)
+                    if disp <= epsilon[idx-1]:
                         rmlist = np.append(rmlist,i)
                         break
             rmlist = rmlist.astype('int32')       
             
             
-            print(x.shape)
-            print(params["W"+str(idx)].shape)
-            
-            print(params["b"+str(idx)])
             if idx == 1:
                 self.init_remove.append(rmlist)
-                print(type(rmlist),rmlist)
                 if complement:
                     pass # 工事中 一旦スルーで
                 else:
                     self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
             else:
-                print(type(rmlist),rmlist)
                 if complement:
                     pass # 工事中 一旦スルーで
                 else:
+                    print(idx,rmlist)
                     self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
                     self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
                     self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)                   
@@ -93,22 +88,18 @@ class Toba:
             x = np.delete(x,rmlist,1)
             
             tmp = params["W"+str(idx)]
-            print(x.shape)
-            print(tmp.shape)
             x = np.dot(x,tmp) + params["b"+str(idx)]
-            print(x.shape)
-            print(params["b"+str(idx)].shape)
                 
         return self.params
     
     def forward(self,x,params):
         if not self.init_remove==[]:
             for i in self.init_remove:
-                x = np.delete(x,i,0)
+                x = np.delete(x,i,1)
         return x
             
     def backward(self,dout,params):
-        pass
+        return None
 
 
 class Network:
@@ -289,8 +280,6 @@ class Affine: #3
        self.x = x
        w = params["W"+str(self.idx)]
        b = params["b"+str(self.idx)]
-       print(x.shape)
-       print(w.shape)
        out = np.dot(x,w) + b
        return out
     
