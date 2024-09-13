@@ -11,6 +11,7 @@ from weight import *
 import matplotlib.pyplot as plt
 import tqdm
 import copy
+import time
 
 
 class SGD:
@@ -81,7 +82,7 @@ class CpSGD:
         
         wi = weightinit()
         self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
-        self.dictshape(self.params)
+        #self.dictshape(self.params)
         
         self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu, toba=True)
         
@@ -108,12 +109,10 @@ class CpSGD:
                 cnt += 1
             
             self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
-            self.dictshape(self.params)
-            # for idx in range(1,len(self.layer)+1):
-            #     self.params["W"+str(idx)], self.params["W"+str(idx-1)] = self.model.rmw(idx, x_batch, self.epsilon, self.complement)
-    def dictshape(sekf,dict):
-        for key ,value in dict.items():
-            print(key,":",value.shape)
+            #self.dictshape(self.params)
+    #def dictshape(sekf,dict):
+        #for key ,value in dict.items():
+            #print(key,":",value.shape)
 
 
 class Adam:
@@ -177,10 +176,10 @@ print("start")
 
 
 layer1 = [100,100,100]
-# trial1 = SGD(layer=layer1, weightinit=Rows, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
+# trial1 = SGD(layer=layer1, weightinit=Rows, data_n=10000, max_epoch=100, batch_size=100, lr=0.04, check=10)
 # trial1.fit()
 epsilon = [1e-5,6.5e-3,8e-3,8e-3]
-trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=40, batch_size=200, lr=0.04, check=10, epsilon=epsilon, complement=False, cp=5)
+trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=200, lr=0.04, check=10, epsilon=epsilon, complement=False, cp=3)
 trial1.fit()
 
 # trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
@@ -239,11 +238,24 @@ def plt_save(name,base,forward,function,xx):
     ax4.plot(w_changes,loss4)
     ax4.set_title("4")
     
-    plt.savefig("image/copy/"+name+".png")    
+    plt.savefig("image/copy/"+name+".png")   
+
+def meajure_time(data_n):
+    start = time.time()
+    if data_n <=60000:
+        x_data = x_train[:data_n]
+        t_data = t_train[:data_n]
+        trial1.model.predict(x_data,t_data)
+    else:
+        x_data = x_train.append(x_train,x_test,axis=0)
+        t_data = t_train.append(x_train,x_test,axis=0)
+    end = time.time()
+    print(end-start)
     
 # for i in tqdm.tqdm(range(0,2)):
 #     # x = np.arange(-1,1,0.05)
 #     # plt_save(str(i)+"accuracy",i,i,"accuracy",x)
 #     x = np.arange(-1,1,0.05)
 #     plt_save(str(i)+"loss",i,i,"cal_loss",x)
+meajure_time(50000)
 print("finish")

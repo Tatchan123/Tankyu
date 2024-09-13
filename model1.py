@@ -35,7 +35,6 @@ from collections import OrderedDict
 class Toba:
     def __init__(self):
         self.init_remove = []
-        print("aiueoaiueo")
         
         
     def rmw(self, x, params, layer, epsilon, complement=False):
@@ -47,7 +46,7 @@ class Toba:
         self.params = params
         x = self.forward(x,self.params)
         for idx in range(1,len(layer)+2):
-            print(idx)
+            #print(idx)
             w = self.params["W"+str(idx)]
             out = []
             for i in x:
@@ -79,7 +78,7 @@ class Toba:
                 if complement:
                     pass # 工事中 一旦スルーで
                 else:
-                    print(idx,rmlist)
+                    #print(idx,rmlist)
                     self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
                     self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
                     self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)                   

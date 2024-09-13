@@ -1,5 +1,0 @@
-(^O^)
-wow 
-wwwwwww
-
-aaaairosidj
