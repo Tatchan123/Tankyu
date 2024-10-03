@@ -81,39 +81,47 @@ class CpSGD:
         
         wi = weightinit()
         self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
-        self.dictshape(self.params)
         
         self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu, toba=True)
         
         self.train_acc = []
         
     def fit(self):
-        cnt = 0
-        for j in range(self.cp):
-            for i in range(self.max_epoch):
-                batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
-                x_batch = x_train[batch_mask]
-                t_batch = t_train[batch_mask]
+        for i in range(self.max_epoch):
+            batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
+            x_batch = x_train[batch_mask]
+            t_batch = t_train[batch_mask]
                 
+            grads = self.model.gradient(x_batch, t_batch, self.params)      
+            for key in self.params.keys():
+                self.params[key] -= self.lr*grads[key]
                 
-                grads = self.model.gradient(x_batch, t_batch, self.params)      
-                for key in self.params.keys():
-                    self.params[key] -= self.lr*grads[key]
-                
-                if cnt == self.check:
-                    cnt = 0
-                    tmp = self.model.accuracy(x_train,t_train)
-                    self.train_acc.append(tmp)
-                    print("epoch:",str(i)," | ",str(tmp))
-                cnt += 1
-            
-            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
-            self.dictshape(self.params)
-            # for idx in range(1,len(self.layer)+1):
-            #     self.params["W"+str(idx)], self.params["W"+str(idx-1)] = self.model.rmw(idx, x_batch, self.epsilon, self.complement)
-    def dictshape(sekf,dict):
-        for key ,value in dict.items():
-            print(key,":",value.shape)
+            if i%self.check==0 and i>=self.check:
+                    print("epoch:",str(i)," | ",str(self.model.accuracy(x_train,t_train)))
+
+            if i%self.cp==0 and i>=self.cp:
+                print("start rmw"+str(i/self.cp),"from:"+str(self.model.accuracy(x_train,t_train,self.params))," ===========================================")
+                self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
+                tmp = [self.params["W1"].shape[0]]
+                for i in range(1,int((len(self.params)/2)+1)):
+                    tmp = np.append(tmp,self.params["b"+str(i)].shape)
+                print(tmp)
+                print("after rmw"+str(i/self.cp),"|",str(self.model.accuracy(x_train,t_train,self.params)))
+                print("finish rmw ==========================================")
+        
+        
+        
+        # def cp_func ():
+        #     out = None
+        #     print("aa")
+        #     print("start rmw ===========================================")
+        #     print("befor rmw"+str(cnt/self.cp),"|",str(self.model.accuracy(x_train,t_train,self.params)))
+        #     out = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
+        #     for key ,value in dict.items():
+        #         print(key,":",value.shape)
+        #     print("after rmw"+str(cnt/self.cp),"|",str(self.model.accuracy(x_train,t_train,self.params)))
+        #     print("finish rmw ==========================================")
+        #     return out
 
 
 class Adam:
@@ -180,11 +188,16 @@ layer1 = [100,100,100]
 # trial1 = SGD(layer=layer1, weightinit=Rows, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
 # trial1.fit()
 epsilon = [1e-5,6.5e-3,8e-3,8e-3]
-trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=40, batch_size=200, lr=0.04, check=10, epsilon=epsilon, complement=False, cp=5)
+trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=4000, batch_size=200, lr=0.04, check=5, epsilon=epsilon, complement=False, cp=50)
 trial1.fit()
 
 # trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
 # trial2.fit()
+
+
+
+
+
 
 
 
@@ -246,4 +259,4 @@ def plt_save(name,base,forward,function,xx):
 #     # plt_save(str(i)+"accuracy",i,i,"accuracy",x)
 #     x = np.arange(-1,1,0.05)
 #     plt_save(str(i)+"loss",i,i,"cal_loss",x)
-print("finish")
+#print("finish")

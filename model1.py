@@ -23,6 +23,7 @@ class ImportMnist
 
 
 import gpu
+import copy
 if gpu.Use_Gpu:
     import cupy as np
 else:
@@ -35,8 +36,6 @@ from collections import OrderedDict
 class Toba:
     def __init__(self):
         self.init_remove = []
-        print("aiueoaiueo")
-        
         
     def rmw(self, x, params, layer, epsilon, complement=False):
         """
@@ -45,10 +44,11 @@ class Toba:
         complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
         """
         self.params = params
+        
         x = self.forward(x,self.params)
-        for idx in range(1,len(layer)+2):
-            print(idx)
-            w = self.params["W"+str(idx)]
+        for idx in range(1,len(layer)+2): #次の層への出力値を使える形に変換する
+            batch_size = len(x)
+            w = copy.deepcopy(self.params["W"+str(idx)])
             out = []
             for i in x:
                 y = (i.reshape(-1,1))*w
@@ -57,38 +57,34 @@ class Toba:
             out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
             rmlist = np.array([])
             
-            for i in range(0,len(out)-2):# 全パターン試すためのfor i,for j                    
-                   for j in range(i+1,len(out-1)):
+            
+            for i in range(0,len(out)-2):# 分散の計算                 
+                   for j in range(i+1,len(out)-1):
                     diff = out[i] - out[j]
                     disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
-                 #分散 = 2乗の平均 - 平均の2乗
-                    #print(disp)
                     if disp <= epsilon[idx-1]:
                         rmlist = np.append(rmlist,i)
                         break
+                        
             rmlist = rmlist.astype('int32')       
-            
             
             if idx == 1:
                 self.init_remove.append(rmlist)
-                if complement:
-                    pass # 工事中 一旦スルーで
-                else:
-                    self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+                self.params["W"+str(idx)] = copy.deepcopy(np.delete(self.params["W"+str(idx)],rmlist,axis=0))
             else:
-                if complement:
-                    pass # 工事中 一旦スルーで
-                else:
-                    print(idx,rmlist)
-                    self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-                    self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
-                    self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)                   
-            
+                self.params["W"+str(idx)] = copy.deepcopy(np.delete(self.params["W"+str(idx)],rmlist,axis=0))                
+                self.params["W"+str(idx-1)] = copy.deepcopy(np.delete(self.params["W"+str(idx-1)],rmlist,axis=1))
+                self.params["b"+str(idx-1)] = copy.deepcopy(np.delete(self.params["b"+str(idx-1)],rmlist,0))
+                
+            if complement:
+                self.params["W"+str(idx)][j] *= 2
+                tmp = copy.deepcopy(diff.reshape(batch_size,-1))
+                self.params["b"+str(idx)] += copy.deepcopy(np.average([diff],axis=0))
+                
+            print("index="+str(idx),"::delete",str(len(rmlist))+"nodes")
             
             x = np.delete(x,rmlist,1)
-            
-            tmp = params["W"+str(idx)]
-            x = np.dot(x,tmp) + params["b"+str(idx)]
+            x = np.dot(x,params["W"+str(idx)]) + params["b"+str(idx)]
                 
         return self.params
     
@@ -206,10 +202,11 @@ class Network:
         
     #     return self.params["W"+str(idx)], self.params["W"+str(idx-1)]
 
-    def accuracy(self,x,t):
+    def accuracy(self,x,t,params=None):
         """
         正確性を求める  多分使わん    作りたかっただけ
         """
+        if params != None : self.params = params
         y = self.predict(x,t)
         y = np.argmax(y,axis=1)
         if t.ndim != 1 :  t = np.argmax(t, axis=1)     #大発見 こんな書き方できるのか
@@ -280,6 +277,8 @@ class Affine: #3
        self.x = x
        w = params["W"+str(self.idx)]
        b = params["b"+str(self.idx)]
+    #    print(np.dot(x,w).shape)
+    #    print(b.shape)
        out = np.dot(x,w) + b
        return out
     
