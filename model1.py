@@ -37,7 +37,7 @@ class Toba:
         self.init_remove = []
         
         
-    def rmw(self, x, params, layer, epsilon, complement=False):
+    def rmw(self, x, params, layer, epsilon, complement=False, first_layer=False):
         """
         idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
         epsilon:分散がこの値より小さいときニューロンを結合する float?
@@ -57,32 +57,45 @@ class Toba:
             rmlist = np.array([])
             
             for i in range(0,len(out)-2):# 全パターン試すためのfor i,for j                    
-                   for j in range(i+1,len(out-1)):
-                    diff = out[i] - out[j]
-                    disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
+                   for j in range(i+1,len(out)-1):
+                        diff = out[i] - out[j]
+                        disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
                  #分散 = 2乗の平均 - 平均の2乗
                     #print(disp)
-                    if disp <= epsilon[idx-1]:
-                        rmlist = np.append(rmlist,i)
-                        break
+                        if disp <= epsilon[idx-1]:
+                            if idx == 1 or 2:
+                                if first_layer:
+                                    rmlist = np.append(rmlist,i)
+                            else:
+                                rmlist = np.append(rmlist,i)
+                            break
             rmlist = rmlist.astype('int32')       
             
             
-            if idx == 1:
-                self.init_remove.append(rmlist)
+            if idx == 1 :
+                if first_layer:
+                    self.init_remove.append(rmlist)
+                    if complement:
+                        pass # 工事中 一旦スルーで
+                    else:
+                        self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+            elif idx == 2:
+                if first_layer:
+                    if complement:
+                        pass # 工事中 一旦スルーで
+                    else:
+                        #print(idx,rmlist)
+                        self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+                        self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
+                        self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)      
+            else:             
                 if complement:
-                    pass # 工事中 一旦スルーで
-                else:
-                    self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-            else:
-                if complement:
-                    pass # 工事中 一旦スルーで
+                        pass # 工事中 一旦スルーで
                 else:
                     #print(idx,rmlist)
                     self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
                     self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
-                    self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)                   
-            
+                    self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)      
             
             x = np.delete(x,rmlist,1)
             

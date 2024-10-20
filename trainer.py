@@ -66,20 +66,20 @@ class CpSGD:
     epsilon,complement: Network.rmw参照
     cp: 特徴量比較して結合する作業をやる回数
     """
-    def __init__(self, layer, weightinit, data_n, max_epoch, batch_size, lr, check, epsilon, complement, cp):
+    def __init__(self, layer, weightinit, data_n, epochs, batch_size, lr, check, epsilon, complement, first_layer):
         
         self.layer = layer
         self.data_n = data_n
         self.x_train = x_train[:self.data_n]
         self.x_test = x_test[:self.data_n]
-        self.max_epoch = max_epoch
+        self.epochs = epochs
         self.batch_size = batch_size
         self.lr = lr
         self.check = check
         self.epsilon = epsilon
         self.complement = complement
-        self.cp = cp
-        
+        self.first_layer = first_layer
+
         wi = weightinit()
         self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
         #self.dictshape(self.params)
@@ -90,8 +90,8 @@ class CpSGD:
         
     def fit(self):
         cnt = 0
-        for j in range(self.cp):
-            for i in range(self.max_epoch):
+        for single_epoch in self.epochs:
+            for i in range(single_epoch):
                 batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
                 x_batch = x_train[batch_mask]
                 t_batch = t_train[batch_mask]
@@ -108,7 +108,7 @@ class CpSGD:
                     print("epoch:",str(i)," | ",str(tmp))
                 cnt += 1
             
-            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
+            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon, complement=False, first_layer=self.first_layer)
             #self.dictshape(self.params)
     #def dictshape(sekf,dict):
         #for key ,value in dict.items():
@@ -175,12 +175,12 @@ print("start")
 
 
 
-layer1 = [100,100,100]
-# trial1 = SGD(layer=layer1, weightinit=Rows, data_n=10000, max_epoch=100, batch_size=100, lr=0.04, check=10)
+# layer1 = [100,100,100]
+# # trial1 = SGD(layer=layer1, weightinit=Rows, data_n=10000, max_epoch=100, batch_size=100, lr=0.04, check=10)
+# # trial1.fit()
+# epsilon = [1e-5,6.5e-3,8e-3,8e-3]
+# trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=200, lr=0.04, check=10, epsilon=epsilon, complement=False, cp=3)
 # trial1.fit()
-epsilon = [1e-5,6.5e-3,8e-3,8e-3]
-trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=200, lr=0.04, check=10, epsilon=epsilon, complement=False, cp=3)
-trial1.fit()
 
 # trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
 # trial2.fit()
@@ -193,7 +193,7 @@ trial1.fit()
 
 
 # Wの動きを観察してみよう
-params = copy.deepcopy(trial1.params)
+
 
 def get_loss(param_key,base_neuron,forward_neuron,w_changes,function):
     new_params = copy.deepcopy(params)
@@ -240,15 +240,16 @@ def plt_save(name,base,forward,function,xx):
     
     plt.savefig("image/copy/"+name+".png")   
 
-def meajure_time(data_n):
+def meajure_time(data_n,repeat):
     start = time.time()
-    if data_n <=60000:
-        x_data = x_train[:data_n]
-        t_data = t_train[:data_n]
-        trial1.model.predict(x_data,t_data)
-    else:
-        x_data = x_train.append(x_train,x_test,axis=0)
-        t_data = t_train.append(x_train,x_test,axis=0)
+    for i in range(repeat):
+        if data_n <=60000:
+            x_data = x_train[:data_n]
+            t_data = t_train[:data_n]
+            trial1.model.predict(x_data,t_data)
+        else:
+            x_data = x_train.append(x_train,x_test,axis=0)
+            t_data = t_train.append(x_train,x_test,axis=0)
     end = time.time()
     print(end-start)
     
@@ -257,5 +258,20 @@ def meajure_time(data_n):
 #     # plt_save(str(i)+"accuracy",i,i,"accuracy",x)
 #     x = np.arange(-1,1,0.05)
 #     plt_save(str(i)+"loss",i,i,"cal_loss",x)
-meajure_time(50000)
+
+
+
+layer1 = [100,100,100]
+trial1 = SGD(layer=layer1, weightinit=Rows, data_n=10000, max_epoch=120, batch_size=100, lr=0.04, check=30)
+trial1.fit()
+meajure_time(50000,10)
+
+epsilon = [1e-5,6.5e-3,8e-3,8e-3]
+trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.04, check=30, epsilon=epsilon, complement=False, first_layer=True)
+trial1.fit()
+meajure_time(50000,10)
+
+
+params = copy.deepcopy(trial1.params)
+
 print("finish")
