@@ -37,7 +37,7 @@ class Toba:
         self.init_remove = []
         
         
-    def rmw(self, x, params, layer, epsilon, complement=False, first_layer=False):
+    def rmw(self, x, params, layer, epsilon, complement,first_layer):
         """
         idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
         epsilon:分散がこの値より小さいときニューロンを結合する float?
@@ -60,17 +60,17 @@ class Toba:
                    for j in range(i+1,len(out)-1):
                         diff = out[i] - out[j]
                         disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
-                 #分散 = 2乗の平均 - 平均の2乗
-                    #print(disp)
+                        #分散 = 2乗の平均 - 平均の2乗
+                        #print(disp)
                         if disp <= epsilon[idx-1]:
-                            if idx == 1 or 2:
+                            if idx == 1:
                                 if first_layer:
                                     rmlist = np.append(rmlist,i)
                             else:
                                 rmlist = np.append(rmlist,i)
                             break
+                        
             rmlist = rmlist.astype('int32')       
-            
             
             if idx == 1 :
                 if first_layer:
@@ -79,15 +79,15 @@ class Toba:
                         pass # 工事中 一旦スルーで
                     else:
                         self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-            elif idx == 2:
-                if first_layer:
-                    if complement:
-                        pass # 工事中 一旦スルーで
-                    else:
-                        #print(idx,rmlist)
-                        self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-                        self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
-                        self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)      
+            # elif idx == 2:
+            #     if first_layer:
+            #         if complement:
+            #             pass # 工事中 一旦スルーで
+            #         else:
+            #             #print(idx,rmlist)
+            #             self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+            #             self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
+            #             self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)      
             else:             
                 if complement:
                         pass # 工事中 一旦スルーで
@@ -130,11 +130,6 @@ class Network:
         self.params = params
         self.rmlist = []
         
-        #重み初期化
-        """
-        wi = weight_init() #クラスのアドレス持って来るつもり（呼び出し元からそのまま持ってくる）
-        self.params = wi.weight_initialization(self.input_size, self.layer_size, self.output_size) #一応クラス引き継げそうな感じ 呼び出し確認よろ
-        """
         
         #レイヤ初期化
         self.activation = activation
@@ -190,34 +185,7 @@ class Network:
 
 
 
-    # def rmw(self, idx, x, epsilon, complement=False):
-    #     """
-    #     idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
-    #     epsilon:分散がこの値より小さいときニューロンを結合する float?
-    #     complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
-    #     """
-    #     out = Affine(idx).testward(x,self.params)
-    #     rmlist = []
-    #     for i in range(0,len(out)-2):# 全パターン試すためのfor i,for j                    
-    #         for j in range(i+1,len(out-1)):
-    #             diff = out[i] - out[j]
-    #             disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
-    #             #分散 = 2乗の平均 - 平均の2乗
-    #             if disp <= epsilon:
-    #                 print(i,j,disp)
-    #                 rmlist = np.append(rmlist,i)
-    #                 rmlist = rmlist.astype('int32')
-    #                 break
-        
-    #     print(type(rmlist),rmlist)
-    #     if complement:
-    #         pass # 工事中 一旦スルーで
-    #     else:
-    #         self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-    #         self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx)],rmlist,axis=1)
-        
-    #     return self.params["W"+str(idx)], self.params["W"+str(idx-1)]
-
+    
     def accuracy(self,x,t):
         """
         正確性を求める  多分使わん    作りたかっただけ

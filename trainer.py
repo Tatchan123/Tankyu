@@ -108,11 +108,12 @@ class CpSGD:
                     print("epoch:",str(i)," | ",str(tmp))
                 cnt += 1
             
-            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon, complement=False, first_layer=self.first_layer)
-            #self.dictshape(self.params)
-    #def dictshape(sekf,dict):
-        #for key ,value in dict.items():
-            #print(key,":",value.shape)
+            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon, complement=self.complement, first_layer=self.first_layer)
+            # self.dictshape(self.params)
+
+    def dictshape(sekf,dict):
+        for key ,value in dict.items():
+            print(key,":",value.shape)
 
 
 class Adam:
@@ -163,33 +164,65 @@ class Adam:
             cnt += 1
 
 
+class CpAdam:
+    def __init__(self, layer, weightinit, data_n, epochs, batch_size, lr, check, decreace1, decreace2, epsilon, complement, first_layer):
+        
+        self.layer = layer
+        self.data_n = data_n
+        self.x_train = x_train[:self.data_n]
+        self.x_test = x_test[:self.data_n]
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.lr = lr
+        self.check = check
+        self.decreace1 = decreace1
+        self.decreace2 = decreace2
+        self.epsilon = epsilon
+        self.complement = complement
+        self.first_layer = first_layer
+        
+        wi = weightinit()
+        self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
+        
+        self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu)
+        
+        self.train_acc = []
+        
+    def fit(self):
+        cnt = 0
+        self.m,self.v = {},{}
+
+        for k,v in self.params.items():
+            self.m[k] = np.zeros_like(v)
+            self.v[k] = np.zeros_like(v)
 
 
-"""
-以下実行系      
+        for single_epoch in self.epochs:        
+            for i in range(single_epoch):
+                batch_mask = np.random.choice(self.data_n,self.batch_size,self.params)
+                x_batch = x_train[batch_mask]
+                t_batch = t_train[batch_mask]
+                grads = self.model.gradient(x_batch, t_batch, self.params)
 
-"""
-(x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
+                crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
+                
+                for key in self.params.keys():
+                    self.m[key] += (1-self.decreace1) * (grads[key]-self.m[key])
+                    self.v[key] += (1-self.decreace2) * (grads[key]**2-self.v[key])
+                    self.params[key] -= crt_lr * self.m[key] / (np.sqrt(self.v[key]) +1e-7)
+                    
+                if cnt == self.check:
+                    cnt = 0
+                    tmp = self.model.accuracy(x_train,t_train)
+                    self.train_acc.append(tmp)
+                    print("epoch:",str(i)," | ",str(tmp))
+            cnt += 1
+            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon, complement=self.complement, first_layer=self.first_layer)
+            # self.dictshape(self.params)
 
-print("start")
-
-
-
-# layer1 = [100,100,100]
-# # trial1 = SGD(layer=layer1, weightinit=Rows, data_n=10000, max_epoch=100, batch_size=100, lr=0.04, check=10)
-# # trial1.fit()
-# epsilon = [1e-5,6.5e-3,8e-3,8e-3]
-# trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=200, lr=0.04, check=10, epsilon=epsilon, complement=False, cp=3)
-# trial1.fit()
-
-# trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
-# trial2.fit()
-
-
-
-
-
-
+    def dictshape(sekf,dict):
+        for key ,value in dict.items():
+            print(key,":",value.shape)
 
 
 # Wの動きを観察してみよう
@@ -200,7 +233,7 @@ def get_loss(param_key,base_neuron,forward_neuron,w_changes,function):
     loss_changes = np.array([])
     for i in w_changes:
       new_params["W"+str(param_key)][base_neuron][forward_neuron] = params["W"+str(param_key)][base_neuron][forward_neuron].copy() + i
-      trial1.model.updateparams(new_params)
+      optimizer1.model.updateparams(new_params)
       loss_changes = np.append(loss_changes,eval("trial1.model."+function+"(x_train,t_train)"))
     #   print(params["W"+str(param_key)][base_neuron][forward_neuron])
     #   print(new_params["W"+str(param_key)][base_neuron][forward_neuron])
@@ -240,38 +273,97 @@ def plt_save(name,base,forward,function,xx):
     
     plt.savefig("image/copy/"+name+".png")   
 
-def meajure_time(data_n,repeat):
+
+def meajure_time(optimizer, data_n, repeat):
+    
     start = time.time()
     for i in range(repeat):
         if data_n <=60000:
             x_data = x_train[:data_n]
             t_data = t_train[:data_n]
-            trial1.model.predict(x_data,t_data)
+            optimizer.model.predict(x_data,t_data)
         else:
             x_data = x_train.append(x_train,x_test,axis=0)
             t_data = t_train.append(x_train,x_test,axis=0)
     end = time.time()
-    print(end-start)
-    
+    return end-start
+
+
+
+
+
+
+
+
+"""
+以下実行系      
+
+"""
+(x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
+
+
+result_SGD = {
+    "Time":[],
+    "Accuracy":[]
+}
+
+result_CpSGD = { 
+    "Time":[],
+    "Accuracy":[]
+}
+print("start")
+
+
+
+
+layer1 = [100,100,100]
+# optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
+# optimizer1.fit()
+
+epsilon1 = [1e-5,6.5e-3,8e-3,8e-3]
+# optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,50,50,50], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, first_layer=False)
+# optimizer2.fit()
+
+# optimizer3 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
+# optimizer3.fit()
+
+# optimizer4 = CpAdam(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.001, check=10, epsilon=epsilon1, complement=False, first_layer=False)
+# optimizer4.fit()
+
+
+# 実験結果出力用　後で関数にしまっとくかも
+for i in range(10):
+    optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
+    optimizer1.fit()
+    result_SGD["Time"].append(int(meajure_time(optimizer1,50000,1)*10000)/10000) #見やすいように小数第５位で切り捨て、有効数字4桁
+    accuracy = int(optimizer1.train_acc[len(optimizer1.train_acc)-1] * 10000)/10000
+    result_SGD["Accuracy"].append(accuracy)
+
+    optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,0,0,0,0], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, first_layer=True)
+    optimizer2.fit()
+    result_CpSGD["Time"].append(int(meajure_time(optimizer2,50000,1)*10000)/10000)
+    accuracy = int(optimizer2 .train_acc[len(optimizer2.train_acc)-1] * 10000)/10000
+    result_CpSGD["Accuracy"].append(accuracy)
+
+print("Result of SGD{")
+for key,value in result_SGD.items():
+    print(str(key),":",str(value))
+print("}")
+
+print("Result of CpSGD{")
+for key,value in result_CpSGD.items():
+    print(str(key),":",str(value))
+print("}")
+
+
+params = copy.deepcopy(optimizer1.params)
+
+
 # for i in tqdm.tqdm(range(0,2)):
 #     # x = np.arange(-1,1,0.05)
 #     # plt_save(str(i)+"accuracy",i,i,"accuracy",x)
 #     x = np.arange(-1,1,0.05)
 #     plt_save(str(i)+"loss",i,i,"cal_loss",x)
 
-
-
-layer1 = [100,100,100]
-trial1 = SGD(layer=layer1, weightinit=Rows, data_n=10000, max_epoch=120, batch_size=100, lr=0.04, check=30)
-trial1.fit()
-meajure_time(50000,10)
-
-epsilon = [1e-5,6.5e-3,8e-3,8e-3]
-trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.04, check=30, epsilon=epsilon, complement=False, first_layer=True)
-trial1.fit()
-meajure_time(50000,10)
-
-
-params = copy.deepcopy(trial1.params)
 
 print("finish")
