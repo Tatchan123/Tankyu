@@ -323,8 +323,8 @@ layer1 = [100,100,100]
 # optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
 # optimizer1.fit()
 
-epsilon1 = [1e-5,6.5e-3,8e-3,8e-3]
-optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[100,100,100,100], batch_size=500, lr=0.04, check=10, epsilon=epsilon1, complement=True, rmw_layer=[1,2,3,4])
+epsilon1 = [1e-6,1e-2,1e-2,1.2e-2]
+optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[100,100,100,100], batch_size=500, lr=0.04, check=10, epsilon=epsilon1, complement=False, rmw_layer=[0,2,3,4])
 optimizer2.fit()
 
 # optimizer3 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)

@@ -75,10 +75,11 @@ class Toba:
             rmlist = rmlist.astype('int32')       
             
             if complement:
-                scalar = [1]*len(["W"+str(idx)])
+                scalar = np.array([1]*len(self.params["W"+str(idx)]))
+                print(scalar.shape)
                 for i in range(len(rmlist)):
-                    scalar[completionlist[i]] += scalar[rmlist[i]]
-                self.params["W"+str(idx)] *= scalar
+                    scalar[int(completionlist[i])] += scalar[int(rmlist[i])]
+                self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
                 self.params["b"+str(idx)] += np.sum(difflist)
             
             if idx == 1:
