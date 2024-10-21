@@ -56,6 +56,7 @@ class Toba:
             out = np.array(out)
             out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
             rmlist = np.array([])
+            rmpair = np.array([])
             
             
             for i in range(0,len(out)-2):# 分散の計算                 
@@ -64,10 +65,12 @@ class Toba:
                     disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
                     if disp <= epsilon[idx-1]:
                         rmlist = np.append(rmlist,i)
+                        rmpair=np.append(rmpair,[i,j],axis=1)
                         break
                         
             rmlist = rmlist.astype('int32')       
-            
+            print(rmpair)
+
             if idx == 1:
                 self.init_remove.append(rmlist)
                 self.params["W"+str(idx)] = copy.deepcopy(np.delete(self.params["W"+str(idx)],rmlist,axis=0))
@@ -77,9 +80,12 @@ class Toba:
                 self.params["b"+str(idx-1)] = copy.deepcopy(np.delete(self.params["b"+str(idx-1)],rmlist,0))
                 
             if complement:
-                self.params["W"+str(idx)][j] *= 2
-                tmp = copy.deepcopy(diff.reshape(batch_size,-1))
-                self.params["b"+str(idx)] += copy.deepcopy(np.average([diff],axis=0))
+                pass
+                #for i 
+                # print(self.params["W"+str(idx)][leftlist].shape)
+                # self.params["W"+str(idx)][leftlist] *= 2
+                # tmp = copy.deepcopy(diff.reshape(batch_size,-1))
+                # self.params["b"+str(idx)] += copy.deepcopy(np.average([diff],axis=0))
                 
             print("index="+str(idx),"::delete",str(len(rmlist))+"nodes")
             

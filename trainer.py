@@ -101,27 +101,16 @@ class CpSGD:
 
             if i%self.cp==0 and i>=self.cp:
                 print("start rmw"+str(i/self.cp),"from:"+str(self.model.accuracy(x_train,t_train,self.params))," ===========================================")
-                self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
+                self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon,complement=self.complement)
                 tmp = [self.params["W1"].shape[0]]
-                for i in range(1,int((len(self.params)/2)+1)):
-                    tmp = np.append(tmp,self.params["b"+str(i)].shape)
+                for j in range(1,int((len(self.params)/2)+1)):
+                    tmp = np.append(tmp,self.params["b"+str(j)].shape)
                 print(tmp)
                 print("after rmw"+str(i/self.cp),"|",str(self.model.accuracy(x_train,t_train,self.params)))
                 print("finish rmw ==========================================")
         
         
         
-        # def cp_func ():
-        #     out = None
-        #     print("aa")
-        #     print("start rmw ===========================================")
-        #     print("befor rmw"+str(cnt/self.cp),"|",str(self.model.accuracy(x_train,t_train,self.params)))
-        #     out = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon)
-        #     for key ,value in dict.items():
-        #         print(key,":",value.shape)
-        #     print("after rmw"+str(cnt/self.cp),"|",str(self.model.accuracy(x_train,t_train,self.params)))
-        #     print("finish rmw ==========================================")
-        #     return out
 
 
 class Adam:
@@ -184,11 +173,11 @@ print("start")
 
 
 
-layer1 = [100,100,100]
+layer1 = [10,10,10]
 # trial1 = SGD(layer=layer1, weightinit=Rows, data_n=1000, max_epoch=100, batch_size=100, lr=0.04, check=10)
 # trial1.fit()
 epsilon = [1e-5,6.5e-3,8e-3,8e-3]
-trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=4000, batch_size=200, lr=0.04, check=5, epsilon=epsilon, complement=False, cp=50)
+trial1 = CpSGD(layer=layer1, weightinit=He, data_n=1000, max_epoch=4000, batch_size=200, lr=0.04, check=5, epsilon=epsilon, complement=True, cp=50)
 trial1.fit()
 
 # trial2 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
