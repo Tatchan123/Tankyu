@@ -66,7 +66,7 @@ class CpSGD:
     epsilon,complement: Network.rmw参照
     cp: 特徴量比較して結合する作業をやる回数
     """
-    def __init__(self, layer, weightinit, data_n, epochs, batch_size, lr, check, epsilon, complement, first_layer):
+    def __init__(self, layer, weightinit, data_n, epochs, batch_size, lr, check, epsilon, complement, rmw_layer):
         
         self.layer = layer
         self.data_n = data_n
@@ -78,7 +78,7 @@ class CpSGD:
         self.check = check
         self.epsilon = epsilon
         self.complement = complement
-        self.first_layer = first_layer
+        self.rmw_layer = rmw_layer
 
         wi = weightinit()
         self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
@@ -95,26 +95,29 @@ class CpSGD:
                 batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
                 x_batch = x_train[batch_mask]
                 t_batch = t_train[batch_mask]
-                
-                
+
                 grads = self.model.gradient(x_batch, t_batch, self.params)      
                 for key in self.params.keys():
                     self.params[key] -= self.lr*grads[key]
                 
                 if cnt == self.check:
                     cnt = 0
-                    tmp = self.model.accuracy(x_train,t_train)
-                    self.train_acc.append(tmp)
-                    print("epoch:",str(i)," | ",str(tmp))
+                    print("epoch:",str(i)," | ",str(self.model.accuracy(x_train,t_train)))
                 cnt += 1
-            
-            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon, complement=self.complement, first_layer=self.first_layer)
-            # self.dictshape(self.params)
-
-    def dictshape(sekf,dict):
-        for key ,value in dict.items():
-            print(key,":",value.shape)
-
+                
+                
+            self.model.updateparams(self.params)
+            print("start rmw from:"+str(self.model.accuracy(x_train,t_train))," ===========================================")
+            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, epsilon=self.epsilon, complement=self.complement, rmw_layer=self.rmw_layer)
+            self.model.updateparams(self.params)
+            #↓表示用
+            tmp = [self.params["W1"].shape[0]]
+            for i in range(1,int((len(self.params)/2)+1)):
+                tmp = np.append(tmp,self.params["b"+str(i)].shape)
+            print(tmp)
+            print("after rmw:",str(self.model.accuracy(x_train,t_train)))
+            print("finish rmw ==========================================")
+        print("finish")
 
 class Adam:
     def __init__(self, layer, weightinit, data_n, max_epoch, batch_size, lr, check, decreace1, decreace2):
@@ -165,7 +168,7 @@ class Adam:
 
 
 class CpAdam:
-    def __init__(self, layer, weightinit, data_n, epochs, batch_size, lr, check, decreace1, decreace2, epsilon, complement, first_layer):
+    def __init__(self, layer, weightinit, data_n, epochs, batch_size, lr, check, decreace1, decreace2, epsilon, complement, rmw_layer):
         
         self.layer = layer
         self.data_n = data_n
@@ -179,7 +182,7 @@ class CpAdam:
         self.decreace2 = decreace2
         self.epsilon = epsilon
         self.complement = complement
-        self.first_layer = first_layer
+        self.rmw_layer = rmw_layer
         
         wi = weightinit()
         self.params = wi.weight_initialization(inp=784, layer=layer, out=10)
@@ -217,7 +220,7 @@ class CpAdam:
                     self.train_acc.append(tmp)
                     print("epoch:",str(i)," | ",str(tmp))
             cnt += 1
-            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon, complement=self.complement, first_layer=self.first_layer)
+            self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, layer=self.layer, epsilon=self.epsilon, complement=self.complement, rmw_layer=self.rmw_layer)
             # self.dictshape(self.params)
 
     def dictshape(sekf,dict):
@@ -321,13 +324,13 @@ layer1 = [100,100,100]
 # optimizer1.fit()
 
 epsilon1 = [1e-5,6.5e-3,8e-3,8e-3]
-# optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,50,50,50], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, first_layer=False)
-# optimizer2.fit()
+optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[100,100,100,100], batch_size=500, lr=0.04, check=10, epsilon=epsilon1, complement=True, rmw_layer=[1,2,3,4])
+optimizer2.fit()
 
 # optimizer3 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
 # optimizer3.fit()
 
-# optimizer4 = CpAdam(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.001, check=10, epsilon=epsilon1, complement=False, first_layer=False)
+# optimizer4 = CpAdam(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.001, check=10, epsilon=epsilon1, complement=False, rmw_layer=[1,2,3,4])
 # optimizer4.fit()
 
 
@@ -339,7 +342,7 @@ for i in range(10):
     accuracy = int(optimizer1.train_acc[len(optimizer1.train_acc)-1] * 10000)/10000
     result_SGD["Accuracy"].append(accuracy)
 
-    optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,0,0,0,0], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, first_layer=True)
+    optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,0,0,0,0], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, rmw_layer=[2,3,4])
     optimizer2.fit()
     result_CpSGD["Time"].append(int(meajure_time(optimizer2,50000,1)*10000)/10000)
     accuracy = int(optimizer2 .train_acc[len(optimizer2.train_acc)-1] * 10000)/10000
