@@ -59,6 +59,11 @@ class SGD:
                 print("epoch:",str(i)," | ",str(tmp))
             cnt += 1
 
+    def acc(self,params=None):
+        if params is not None:
+            self.params=params
+        self.model.updateparams(self.params)
+        return self.model.accuracy(x_train,t_train)
 
 
 class CpSGD:
