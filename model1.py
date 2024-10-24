@@ -27,7 +27,7 @@ if gpu.Use_Gpu:
     import cupy as np
 else:
     import numpy as np
-    
+import random
 from collections import OrderedDict
 
 
@@ -35,6 +35,7 @@ from collections import OrderedDict
 class Toba:
     def __init__(self):
         self.init_remove = []
+        
         
         
     def rmw(self, x, params, epsilon, complement,rmw_layer):
@@ -96,6 +97,10 @@ class Toba:
             x = np.dot(x,params["W"+str(idx)]) + params["b"+str(idx)]
                 
         return self.params
+    
+    def rmw_random(self,params,deleat_n):
+        for key in params.keys():
+            lst = random.sample(list(range(len(key))), deleat_n)
     
     def forward(self,x,params):
         if not self.init_remove==[]:
@@ -180,9 +185,6 @@ class Network:
 
     
     def accuracy(self,x,t):
-        """
-        正確性を求める  多分使わん    作りたかっただけ
-        """
         y = self.predict(x,t)
         y = np.argmax(y,axis=1)
         if t.ndim != 1 :  t = np.argmax(t, axis=1)     #大発見 こんな書き方できるのか
