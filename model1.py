@@ -77,7 +77,6 @@ class Toba:
             
             if complement:
                 scalar = np.array([1]*len(self.params["W"+str(idx)]))
-                print(scalar.shape)
                 for i in range(len(rmlist)):
                     scalar[int(completionlist[i])] += scalar[int(rmlist[i])]
                 self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
@@ -98,9 +97,13 @@ class Toba:
                 
         return self.params
     
-    def rmw_random(self,params,deleat_n):
-        for key in params.keys():
-            lst = random.sample(list(range(len(key))), deleat_n)
+    def rmw_random(self,params,deleat_n,rmw_layer):
+        new_params = {}
+        for i in rmw_layer:
+            lst = random.sample(list(range(len(params["W"+str(i)]))), deleat_n[i])
+            new_params["W"+str(i)]  = np.delete(params["W"+str(i)],lst,axis=0)
+            return new_params
+
     
     def forward(self,x,params):
         if not self.init_remove==[]:

@@ -15,20 +15,36 @@ import copy
 from model1 import *
 from trainer import *
 
-nomal_model = SGD(layer=[100,100,100], weightinit=He, data_n=5000,
-            epochs=400, batch_size=500,lr=0.04, check=50)
-nomal_model.fit()
+origin_model = SGD(layer=[100,100,100], weightinit=He, data_n=5000,
+            max_epoch=400, batch_size=500,lr=0.04, check=50)
+origin_model.fit()
+
+origin_params = origin_model.params
+
+sake = Toba()
 
 #処理前
-print(nomal_model.acc())
+print(origin_model.acc())
+
+
+
 #Tobaのみ
-onlytoba_model = copy.deepcopy(nomal_model)
-print(onlytoba_model.acc(Toba.rmw(x=x_train, params=onlytoba_model.params, epsilon=[1e-6,1e-2,1e-2,1.2e-2],
-                                  complement=False, rmw_layer=[2,3,4])))
+onlytoba_params = sake.rmw(x=x_train, params=origin_params, epsilon=[1e-6,1e-2,1e-2,1.2e-2],
+                                  complement=False, rmw_layer=[2,3,4])
+print(origin_model.acc(onlytoba_params))
+
+sake = Toba()
+
 #complement
-complement_model = copy.deepcopy(nomal_model)
-print(complement_model.acc(Toba.rmw(x=x_train, params=onlytoba_model.params, epsilon=[1e-6,1e-2,1e-2,1.2e-2],
-                                    complement=False, rmw_layer=[2,3,4])))
-#ランダム削除
-ran_del_model = copy.deepcopy(nomal_model)
-print()
+complement_model = sake.rmw(x=x_train, params=origin_params, epsilon=[1e-6,1e-2,1e-2,1.2e-2],
+                                  complement=True, rmw_layer=[2,3,4])
+print(origin_model.acc(complement_model))
+
+
+
+# #ランダム削除
+# ran_del_model = sake.rmw_random(params=origin_params,deleat_n=[0,0,10,10,10],rmw_layer=[2,3,4])
+# print(origin_model.acc(onlytoba_params))
+# for i in range(1,int((len(ran_del_model)/2)+1)):
+#     tmp = np.append(tmp,ran_del_model["b"+str(i)].shape)
+# print(tmp)

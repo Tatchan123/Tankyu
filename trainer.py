@@ -13,6 +13,7 @@ import tqdm
 import copy
 import time
 
+(x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
 
 class SGD:
     """
@@ -123,7 +124,11 @@ class CpSGD:
             print("after rmw:",str(self.model.accuracy(x_train,t_train)))
             print("finish rmw ==========================================")
         print("finish")
-
+    def acc(self,params=None):
+        if params is not None:
+            self.params=params
+        self.model.updateparams(self.params)
+        return self.model.accuracy(x_train,t_train)
 class Adam:
     def __init__(self, layer, weightinit, data_n, max_epoch, batch_size, lr, check, decreace1, decreace2):
         
@@ -236,65 +241,65 @@ class CpAdam:
 # Wの動きを観察してみよう
 
 
-def get_loss(param_key,base_neuron,forward_neuron,w_changes,function):
-    new_params = copy.deepcopy(params)
-    loss_changes = np.array([])
-    for i in w_changes:
-      new_params["W"+str(param_key)][base_neuron][forward_neuron] = params["W"+str(param_key)][base_neuron][forward_neuron].copy() + i
-      optimizer1.model.updateparams(new_params)
-      loss_changes = np.append(loss_changes,eval("trial1.model."+function+"(x_train,t_train)"))
-    #   print(params["W"+str(param_key)][base_neuron][forward_neuron])
-    #   print(new_params["W"+str(param_key)][base_neuron][forward_neuron])
-    return(loss_changes)
+# def get_loss(param_key,base_neuron,forward_neuron,w_changes,function):
+#     new_params = copy.deepcopy(params)
+#     loss_changes = np.array([])
+#     for i in w_changes:
+#       new_params["W"+str(param_key)][base_neuron][forward_neuron] = params["W"+str(param_key)][base_neuron][forward_neuron].copy() + i
+#       optimizer1.model.updateparams(new_params)
+#       loss_changes = np.append(loss_changes,eval("trial1.model."+function+"(x_train,t_train)"))
+#     #   print(params["W"+str(param_key)][base_neuron][forward_neuron])
+#     #   print(new_params["W"+str(param_key)][base_neuron][forward_neuron])
+#     return(loss_changes)
 
-def plt_save(name,base,forward,function,xx):
-    fig = plt.figure()
-    w_changes = xx
-    ax1 = fig.add_subplot(2, 2, 1)
-    ax2 = fig.add_subplot(2, 2, 2)
-    ax3 = fig.add_subplot(2, 2, 3)
-    ax4 = fig.add_subplot(2, 2, 4)
+# def plt_save(name,base,forward,function,xx):
+#     fig = plt.figure()
+#     w_changes = xx
+#     ax1 = fig.add_subplot(2, 2, 1)
+#     ax2 = fig.add_subplot(2, 2, 2)
+#     ax3 = fig.add_subplot(2, 2, 3)
+#     ax4 = fig.add_subplot(2, 2, 4)
 
-    loss1 = get_loss(1,base,forward,w_changes,function)
-    loss2 = get_loss(2,base,forward,w_changes,function)
-    loss3 = get_loss(3,base,forward,w_changes,function)
-    loss4 = get_loss(4,base,forward,w_changes,function)
+#     loss1 = get_loss(1,base,forward,w_changes,function)
+#     loss2 = get_loss(2,base,forward,w_changes,function)
+#     loss3 = get_loss(3,base,forward,w_changes,function)
+#     loss4 = get_loss(4,base,forward,w_changes,function)
     
-    if gpu.Use_Gpu:
-        w_changes = np.ndarray.get(w_changes)
-        loss1,loss2,loss3,loss4 = np.ndarray.get(loss1),np.ndarray.get(loss2),np.ndarray.get(loss3),np.ndarray.get(loss4)
+#     if gpu.Use_Gpu:
+#         w_changes = np.ndarray.get(w_changes)
+#         loss1,loss2,loss3,loss4 = np.ndarray.get(loss1),np.ndarray.get(loss2),np.ndarray.get(loss3),np.ndarray.get(loss4)
 
-    ax1.plot(w_changes,loss1)
-    ax1.set_title("1")
-
-
-    ax2.plot(w_changes,loss2)
-    ax2.set_title("2")
+#     ax1.plot(w_changes,loss1)
+#     ax1.set_title("1")
 
 
-    ax3.plot(w_changes,loss3)
-    ax3.set_title("3")
+#     ax2.plot(w_changes,loss2)
+#     ax2.set_title("2")
 
 
-    ax4.plot(w_changes,loss4)
-    ax4.set_title("4")
+#     ax3.plot(w_changes,loss3)
+#     ax3.set_title("3")
+
+
+#     ax4.plot(w_changes,loss4)
+#     ax4.set_title("4")
     
-    plt.savefig("image/copy/"+name+".png")   
+#     plt.savefig("image/copy/"+name+".png")   
 
 
-def meajure_time(optimizer, data_n, repeat):
+# def meajure_time(optimizer, data_n, repeat):
     
-    start = time.time()
-    for i in range(repeat):
-        if data_n <=60000:
-            x_data = x_train[:data_n]
-            t_data = t_train[:data_n]
-            optimizer.model.predict(x_data,t_data)
-        else:
-            x_data = x_train.append(x_train,x_test,axis=0)
-            t_data = t_train.append(x_train,x_test,axis=0)
-    end = time.time()
-    return end-start
+#     start = time.time()
+#     for i in range(repeat):
+#         if data_n <=60000:
+#             x_data = x_train[:data_n]
+#             t_data = t_train[:data_n]
+#             optimizer.model.predict(x_data,t_data)
+#         else:
+#             x_data = x_train.append(x_train,x_test,axis=0)
+#             t_data = t_train.append(x_train,x_test,axis=0)
+#     end = time.time()
+#     return end-start
 
 
 
@@ -303,75 +308,70 @@ def meajure_time(optimizer, data_n, repeat):
 
 
 
-"""
-以下実行系      
-
-"""
-(x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
 
 
-result_SGD = {
-    "Time":[],
-    "Accuracy":[]
-}
+# result_SGD = {
+#     "Time":[],
+#     "Accuracy":[]
+# }
 
-result_CpSGD = { 
-    "Time":[],
-    "Accuracy":[]
-}
-print("start")
+# result_CpSGD = { 
+#     "Time":[],
+#     "Accuracy":[]
+# }
+# print("start")
 
 
 
 
-layer1 = [100,100,100]
-# optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
-# optimizer1.fit()
+# layer1 = [100,100,100]
+# # optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
+# # optimizer1.fit()
 
-epsilon1 = [1e-6,1e-2,1e-2,1.2e-2]
-optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[100,100,100,100], batch_size=500, lr=0.04, check=10, epsilon=epsilon1, complement=False, rmw_layer=[0,2,3,4])
-optimizer2.fit()
+# epsilon1 = [1e-6,1e-2,1e-2,1.2e-2]
+# optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[100,100,100,100], batch_size=500, lr=0.04, check=10, epsilon=epsilon1, complement=False, rmw_layer=[0,2,3,4])
+# optimizer2.fit()
 
-# optimizer3 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
-# optimizer3.fit()
+# # optimizer3 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
+# # optimizer3.fit()
 
-# optimizer4 = CpAdam(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.001, check=10, epsilon=epsilon1, complement=False, rmw_layer=[1,2,3,4])
-# optimizer4.fit()
-
-
-# 実験結果出力用　後で関数にしまっとくかも
-for i in range(10):
-    optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
-    optimizer1.fit()
-    result_SGD["Time"].append(int(meajure_time(optimizer1,50000,1)*10000)/10000) #見やすいように小数第５位で切り捨て、有効数字4桁
-    accuracy = int(optimizer1.train_acc[len(optimizer1.train_acc)-1] * 10000)/10000
-    result_SGD["Accuracy"].append(accuracy)
-
-    optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,0,0,0,0], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, rmw_layer=[2,3,4])
-    optimizer2.fit()
-    result_CpSGD["Time"].append(int(meajure_time(optimizer2,50000,1)*10000)/10000)
-    accuracy = int(optimizer2 .train_acc[len(optimizer2.train_acc)-1] * 10000)/10000
-    result_CpSGD["Accuracy"].append(accuracy)
-
-print("Result of SGD{")
-for key,value in result_SGD.items():
-    print(str(key),":",str(value))
-print("}")
-
-print("Result of CpSGD{")
-for key,value in result_CpSGD.items():
-    print(str(key),":",str(value))
-print("}")
+# # optimizer4 = CpAdam(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.001, check=10, epsilon=epsilon1, complement=False, rmw_layer=[1,2,3,4])
+# # optimizer4.fit()
 
 
-params = copy.deepcopy(optimizer1.params)
+# # 実験結果出力用　後で関数にしまっとくかも
+# for i in range(10):
+#     optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
+#     optimizer1.fit()
+#     result_SGD["Time"].append(int(meajure_time(optimizer1,50000,1)*10000)/10000) #見やすいように小数第５位で切り捨て、有効数字4桁
+#     accuracy = int(optimizer1.train_acc[len(optimizer1.train_acc)-1] * 10000)/10000
+#     result_SGD["Accuracy"].append(accuracy)
+
+#     optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,0,0,0,0], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, rmw_layer=[2,3,4])
+#     optimizer2.fit()
+#     result_CpSGD["Time"].append(int(meajure_time(optimizer2,50000,1)*10000)/10000)
+#     accuracy = int(optimizer2 .train_acc[len(optimizer2.train_acc)-1] * 10000)/10000
+#     result_CpSGD["Accuracy"].append(accuracy)
+
+# print("Result of SGD{")
+# for key,value in result_SGD.items():
+#     print(str(key),":",str(value))
+# print("}")
+
+# print("Result of CpSGD{")
+# for key,value in result_CpSGD.items():
+#     print(str(key),":",str(value))
+# print("}")
 
 
-# for i in tqdm.tqdm(range(0,2)):
-#     # x = np.arange(-1,1,0.05)
-#     # plt_save(str(i)+"accuracy",i,i,"accuracy",x)
-#     x = np.arange(-1,1,0.05)
-#     plt_save(str(i)+"loss",i,i,"cal_loss",x)
+# params = copy.deepcopy(optimizer1.params)
 
 
-print("finish")
+# # for i in tqdm.tqdm(range(0,2)):
+# #     # x = np.arange(-1,1,0.05)
+# #     # plt_save(str(i)+"accuracy",i,i,"accuracy",x)
+# #     x = np.arange(-1,1,0.05)
+# #     plt_save(str(i)+"loss",i,i,"cal_loss",x)
+
+
+# print("finish")
