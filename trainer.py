@@ -117,22 +117,23 @@ class CpSGD:
                 
                 
             self.model.updateparams(self.params)
-            print("start rmw from:"+str(self.model.accuracy(x_train,t_train))," ===========================================")
+            print("start rmw ===========================================")
+            print("accuracy before rmw :",str(self.model.accuracy(x_train,t_train)))
             self.params = self.model.layers["toba"].rmw(x=x_batch, params=self.params, epsilon=self.epsilon, complement=self.complement, rmw_layer=self.rmw_layer)
             self.model.updateparams(self.params)
             #↓表示用
             tmp = [self.params["W1"].shape[0]]
-            for i in range(1,int((len(self.params)/2)+1)):
+            for i in range(1,int(len(self.layer)+2)):
                 tmp = np.append(tmp,self.params["b"+str(i)].shape)
-            print(tmp)
-            print("after rmw:",str(self.model.accuracy(x_train,t_train)))
+            print("Composition of Network :",tmp)
+            print("accuracy after rmw :",str(self.model.accuracy(x_train,t_train)))
             print("finish rmw ==========================================")
         print("finish")
     def acc(self,params=None):
         if params is not None:
             self.params=params
         self.model.updateparams(self.params)
-        return self.model.accuracy(x_train,t_train)
+        return self.model.accuracy(x_test,t_test)
 class Adam:
     def __init__(self, layer, weightinit, data_n, max_epoch, batch_size, lr, check, decreace1, decreace2):
         

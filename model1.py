@@ -55,7 +55,7 @@ class Toba:
             for i in x:
                 y = (i.reshape(-1,1))*w
                 out.append(y)
-            out = np.array(out)
+            out = np.asarray(out)
             out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
             rmlist = np.array([])
             completionlist = np.array([])
@@ -64,7 +64,7 @@ class Toba:
             for i in range(0,len(out)-1):# 全パターン試すためのfor i,for j                    
                    for j in range(i+1,len(out)):
                         diff = out[i] - out[j]
-                        disp = (np.average((diff ** 2))) - (np.average(diff) ** 2)
+                        disp = np.average(diff ** 2) - np.average(diff) ** 2
                         #分散 = 2乗の平均 - 平均の2乗
                         #print(disp)
                         if disp <= epsilon[idx-1]:
@@ -76,7 +76,7 @@ class Toba:
             rmlist = rmlist.astype('int32')       
             
             if complement:
-                scalar = np.array([1]*len(self.params["W"+str(idx)]))
+                scalar = np.ones(len(self.params["W"+str(idx)]))
                 for i in range(len(rmlist)):
                     scalar[int(completionlist[i])] += scalar[int(rmlist[i])]
                 self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
