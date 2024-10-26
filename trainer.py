@@ -295,19 +295,6 @@ class CpAdam:
 #     plt.savefig("image/copy/"+name+".png")   
 
 
-# def meajure_time(optimizer, data_n, repeat):
-    
-#     start = time.time()
-#     for i in range(repeat):
-#         if data_n <=60000:
-#             x_data = x_train[:data_n]
-#             t_data = t_train[:data_n]
-#             optimizer.model.predict(x_data,t_data)
-#         else:
-#             x_data = x_train.append(x_train,x_test,axis=0)
-#             t_data = t_train.append(x_train,x_test,axis=0)
-#     end = time.time()
-#     return end-start
 
 
 
@@ -316,60 +303,6 @@ class CpAdam:
 
 
 
-
-
-# result_SGD = {
-#     "Time":[],
-#     "Accuracy":[]
-# }
-
-# result_CpSGD = { 
-#     "Time":[],
-#     "Accuracy":[]
-# }
-# print("start")
-
-
-
-
-# layer1 = [100,100,100]
-# # optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
-# # optimizer1.fit()
-
-# epsilon1 = [1e-6,1e-2,1e-2,1.2e-2]
-# optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[100,100,100,100], batch_size=500, lr=0.04, check=10, epsilon=epsilon1, complement=False, rmw_layer=[0,2,3,4])
-# optimizer2.fit()
-
-# # optimizer3 = Adam(layer=layer1, weightinit=He, data_n=1000, max_epoch=100, batch_size=1000, lr=0.001, check=10,decreace1=0.9, decreace2=0.999)
-# # optimizer3.fit()
-
-# # optimizer4 = CpAdam(layer=layer1, weightinit=He, data_n=1000, epochs=[120,30,30,30], batch_size=200, lr=0.001, check=10, epsilon=epsilon1, complement=False, rmw_layer=[1,2,3,4])
-# # optimizer4.fit()
-
-
-# # 実験結果出力用　後で関数にしまっとくかも
-# for i in range(10):
-#     optimizer1 = SGD(layer=layer1, weightinit=He, data_n=5000, max_epoch=500, batch_size=500, lr=0.04, check=50)
-#     optimizer1.fit()
-#     result_SGD["Time"].append(int(meajure_time(optimizer1,50000,1)*10000)/10000) #見やすいように小数第５位で切り捨て、有効数字4桁
-#     accuracy = int(optimizer1.train_acc[len(optimizer1.train_acc)-1] * 10000)/10000
-#     result_SGD["Accuracy"].append(accuracy)
-
-#     optimizer2 = CpSGD(layer=layer1, weightinit=He, data_n=5000, epochs=[500,0,0,0,0], batch_size=500, lr=0.04, check=50, epsilon=epsilon1, complement=False, rmw_layer=[2,3,4])
-#     optimizer2.fit()
-#     result_CpSGD["Time"].append(int(meajure_time(optimizer2,50000,1)*10000)/10000)
-#     accuracy = int(optimizer2 .train_acc[len(optimizer2.train_acc)-1] * 10000)/10000
-#     result_CpSGD["Accuracy"].append(accuracy)
-
-# print("Result of SGD{")
-# for key,value in result_SGD.items():
-#     print(str(key),":",str(value))
-# print("}")
-
-# print("Result of CpSGD{")
-# for key,value in result_CpSGD.items():
-#     print(str(key),":",str(value))
-# print("}")
 
 
 # params = copy.deepcopy(optimizer1.params)
