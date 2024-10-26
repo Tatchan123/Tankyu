@@ -15,6 +15,7 @@ import time
 
 (x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
 
+
 class SGD:
     """
     layer・・・隠れ層 リスト e.g.[100,100,100]
@@ -45,13 +46,15 @@ class SGD:
     def fit(self):
         cnt = 0
         for i in range(self.max_epoch):
-            batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
-            x_batch = x_train[batch_mask]
-            t_batch = t_train[batch_mask]
-            
-            grads = self.model.gradient(x_batch, t_batch, self.params)      #gradientメソッド呼び出された時点でNetwork側のparamsを初期化 対応できないところ結構ありそう（かなりめんどい）
-            for key in self.params.keys():
-                self.params[key] -= self.lr*grads[key]
+            for j in range(self.data_n // self.batch_size):
+                batch_mask = np.random.permutation(np.arange(self.data_n))
+                x_batch = x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                t_batch = t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                # ↑ここ、前のだとバッチ1つ作って1エポックってことになってたから全データ使うようにした
+                
+                grads = self.model.gradient(x_batch, t_batch, self.params)      #gradientメソッド呼び出された時点でNetwork側のparamsを初期化 対応できないところ結構ありそう（かなりめんどい）
+                for key in self.params.keys():
+                    self.params[key] -= self.lr*grads[key]
             
             if cnt == self.check:
                 cnt = 0
@@ -98,11 +101,12 @@ class CpSGD:
         cnt = 0
         for single_epoch in self.epochs:
             for i in range(single_epoch):
-                batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
-                x_batch = x_train[batch_mask]
-                t_batch = t_train[batch_mask]
+                for j in range(self.data_n // self.batch_size):
+                    batch_mask = np.random.permutation(np.arange(self.data_n))
+                    x_batch = x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                    t_batch = t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)- 1]]
 
-                grads = self.model.gradient(x_batch, t_batch, self.params)      
+                    grads = self.model.gradient(x_batch, t_batch, self.params)      
                 for key in self.params.keys():
                     self.params[key] -= self.lr*grads[key]
                 
@@ -157,10 +161,11 @@ class Adam:
             self.v[k] = np.zeros_like(v)
             
         for i in range(self.max_epoch):
-            batch_mask = np.random.choice(self.data_n,self.batch_size,self.params)
-            x_batch = x_train[batch_mask]
-            t_batch = t_train[batch_mask]
-            grads = self.model.gradient(x_batch, t_batch, self.params)
+            for j in range(self.data_n // self.batch_size):
+                batch_mask = np.random.permutation(np.arange(self.data_n))
+                x_batch = x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                t_batch = t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                grads = self.model.gradient(x_batch, t_batch, self.params)
 
             crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
             
@@ -212,10 +217,13 @@ class CpAdam:
 
         for single_epoch in self.epochs:        
             for i in range(single_epoch):
-                batch_mask = np.random.choice(self.data_n,self.batch_size,self.params)
-                x_batch = x_train[batch_mask]
-                t_batch = t_train[batch_mask]
-                grads = self.model.gradient(x_batch, t_batch, self.params)
+                for j in range(self.data_n // self.batch_size):
+                    batch_mask = np.random.permutation(np.arange(self.data_n))
+                    x_batch = x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                    t_batch = t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                
+
+                    grads = self.model.gradient(x_batch, t_batch, self.params)
 
                 crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
                 
