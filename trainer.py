@@ -27,7 +27,7 @@ class SGD:
     check・・・何エポックごとに評価するか int e.g. 5          ( batch_size < data_n < batch_size )で頼む
     """
     def __init__(self, layer, weightinit, data_n, max_epoch, batch_size, lr, check):
-        
+        self.layer = layer
         self.data_n = data_n
         self.x_train = x_train[:self.data_n]
         self.x_test = x_test[:self.data_n]
@@ -67,7 +67,7 @@ class SGD:
         if params is not None:
             self.params=params
         self.model.updateparams(self.params)
-        return self.model.accuracy(x_train,t_train)
+        return self.model.accuracy(x_test,t_test)
 
 
 class CpSGD:
@@ -126,7 +126,7 @@ class CpSGD:
             for i in range(1,int(len(self.layer)+2)):
                 tmp = np.append(tmp,self.params["b"+str(i)].shape)
             print("Composition of Network :",tmp)
-            print("accuracy after rmw :",str(self.model.accuracy(x_train,t_train)))
+            print("accuracy after rmw :",str(self.model.accuracy(x_test,t_test)))
             print("finish rmw ==========================================")
         print("finish")
     def acc(self,params=None):
