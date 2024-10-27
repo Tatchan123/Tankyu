@@ -27,126 +27,17 @@ if gpu.Use_Gpu:
     import cupy as np
 else:
     import numpy as np
+    
 from collections import OrderedDict
-import copy
-
-
-class Toba:
-    def __init__(self):
-        self.init_remove = []
-        
-        
-        
-    def rmw(self, x, params, epsilon, complement,rmw_layer):
-        """
-        idx:trainer側でレイヤー数この関数を繰り返すので層数も引数にとる
-        epsilon:分散がこの値より小さいときニューロンを結合する float?
-        complement:Trueならニューロン同士の特徴量の差を補完して削除する側に足す Falseなら何もしない
-        """
-        self.params = copy.deepcopy(params)
-        x = self.forward(x,self.params)
-        for idx in range(1,max(rmw_layer)+1):
-            if idx not in rmw_layer:
-                x = np.dot(x,params["W"+str(idx)]) + params["b"+str(idx)]
-                continue
-            w = self.params["W"+str(idx)]
-            out = []
-            for i in x:
-                y = (i.reshape(-1,1))*w
-                out.append(y)
-            out = np.asarray(out)
-            out = (np.transpose(out, (1, 0, 2))).reshape(len(out[0]),-1)
-            rmlist = []
-            completionlist = np.empty((0,2),dtype=int)
-            difflist = np.array([])
-            
-            for i in range(0,len(out)-1):
-                for j in range(i+1,len(out)):
-                    
-                    diff = out[i] - out[j]
-                    disp = np.average(diff ** 2) - np.average(diff) ** 2
-                    #分散 = 2乗の平均 - 平均の2乗
-                    #print(disp)
-                    if disp <= epsilon[idx-1]:
-                        one_comp = np.array([j,1],dtype=int)
-                        rmlist.append(i)
-                        #diffはjが依存先になっている数だけ倍にする iが依存先になっているのをみつけて、そいつが依存先になっている数を足す
-                        for sublist in completionlist:
-                            if i == sublist[0]:
-                                one_comp[1] += sublist[1]
-                        completionlist = np.vstack((completionlist,one_comp))
-                        difflist = np.append(difflist,np.average(diff)*one_comp[1])
-        
-                        break
-            rmlist = np.asarray(rmlist,dtype='int32')
-            if complement:
-                scalar = np.ones(len(self.params["W"+str(idx)]))
-                for i in range(len(rmlist)):
-                    scalar[int(completionlist[i][0])] += scalar[int(rmlist[i])]
-                print(rmlist)
-                print(completionlist)
-                self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
-                self.params["b"+str(idx)] += np.sum(difflist)
-            
-            if idx == 1:
-                self.init_remove.append(rmlist)
-                self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-            else:
-                self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
-                self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
-                self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist,0)
-                
-            print("hidden_layer"+str(idx),": delete",str(len(rmlist))+"nodes")
-            
-            x = np.delete(x,rmlist,1)
-            x = np.dot(x,self.params["W"+str(idx)]) + self.params["b"+str(idx)]
-                
-        return self.params
-    
-    def rmw_random(self,params,deleat_n,rmw_layer):
-        new_params = copy.deepcopy(params)
-
-        if 1 in rmw_layer:
-            lst = np.random.choice(np.arange(len(params["W1"])), deleat_n[1])
-            self.init_remove.append(lst)
-            new_params["W1"] = np.delete(new_params["W1"],lst,axis=0)
-            #一応入力削るのに対応してるけどそもそもjikken1のモデルにtobaレイヤーないのでどっちにしろacc()でエラー
-            
-        for i in range(2,max(rmw_layer)+1):
-            lst = np.random.choice(np.arange(len(new_params["W"+str(i)])), deleat_n[i])
-            new_params["W"+str(i)]  = np.delete(new_params["W"+str(i)],lst,axis=0)
-            new_params["W"+str(i-1)] = np.delete(new_params["W"+str(i-1)],lst,axis=1)
-            new_params["b"+str(i-1)] = np.delete(new_params["b"+str(i-1)],lst, axis=0)
-
-        
-        return new_params
-
-    
-    def forward(self,x,params):
-        if not self.init_remove==[]:
-            for i in self.init_remove:
-                x = np.delete(x,i,1)
-        return x
-            
-    def backward(self,dout,params):
-        return None
-
+import random
 
 class Network:
-    """
-    バッチファイル受け取り
-    predict(順伝播)
-    loss(損失関数)
-    gradient(逆伝播)
-    
-    """
-    def __init__ (self, input_size, output_size, layer_size, params, activation="relu", toba=False):
+    def __init__ (self, input_size, output_size, layer_size, params, toba, activation="relu"):
         self.input_size = input_size
         self.output_size = output_size
         self.layer_size = layer_size
         self.layer_n = len(self.layer_size)
         self.params = params
-        self.rmlist = []
         
         
         #レイヤ初期化
@@ -165,15 +56,11 @@ class Network:
     
     
     
-    
-    
+    def updateparams(self,params):
+        self.params = params     
     
     def gradient(self,x,t,params):
         self.params = params
-        """
-        勾配の算出 呼び出し後loss→predict
-        x:入力データ t:正解ラベル
-        """
         #順伝播
         self.predict(x,t) #損失関数自体はいらないので返り血はうけとらない  各層通過時にレイヤのインスタンスにアクティベーションと重みが保存されるのでそれでok
         #逆伝播
@@ -187,9 +74,10 @@ class Network:
         return grads
         
     def predict(self,x,t):
-        for k,layer in self.layers.items():
+        for layer in self.layers.values():
             x = layer.forward(x,self.params)
         y = self.last_layer.forward(x,t) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
+            
         return(x)
     
     def backward(self):
@@ -200,9 +88,6 @@ class Network:
         
         for layer in layers:
             dout = layer.backward(dout,self.params)
-
-
-
     
     def accuracy(self,x,t):
         y = self.predict(x,t)
@@ -215,12 +100,75 @@ class Network:
         loss = self.predict(x,t)
         return self.last_layer.forward(loss,t)
 
-    def updateparams(self,params):
-        self.params = params 
+    def rmw(self,x,epsilon,complement,rmw_layer):
+        params = self.params
+        batch_x = self.layers["toba"].forward(x,params)
 
+        for idx in range(1,max(rmw_layer)+1):
+            if idx not in rmw_layer:
+                batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
+                batch_x = self.layers["Activation"+str(idx)].forward(batch_x,params)
+                continue
+            
+            rmlist = []
+            complist = []
+            difflist = []
+            out = []
+            for i in batch_x:
+                y = (i.reshape(-1,1))*params["W"+str(idx)]
+                out.append(y)
+            out=np.asarray(out)
+            out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #y_batch_x
+                
+            for i in range(0,len(out)-1):
+                if i in complist:
+                    continue
+                for j in range(i+1,len(out)):
+                    diff = out[i] - out[j]
+                    disp = np.average(diff**2) - np.average(diff)**2
+                    if disp <= epsilon[idx-1]:
+                        rmlist.append(i)
+                        complist.append(j)
+                        difflist.append(np.average(diff))
+                        break
+            if complement:
+                difflist=np.asarray(difflist)
+                scalar = np.array([1]*len(params["W"+str(idx)]))
+                for n in range(len(rmlist)):
+                    scalar[int(complist[n])] += scalar[int(rmlist[n])]
+                params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
+                params["b"+str(idx)] += np.array([np.sum(difflist)]*len(params["b"+str(idx)]))
+            if idx == 1:
+                params["init_remove"].append(rmlist)
+                params["W1"] = np.delete(params["W1"],rmlist,axis=0)
+            else:
+                params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],rmlist,axis=1)
+                params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
+                params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
+            
+            print("hidden_layer"+str(idx),": delete",str(len(rmlist))+"nodes")
+            if idx == max(rmw_layer) : break
+            batch_x = np.delete(batch_x,rmlist,axis=1)
+            batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
+            batch_x = self.layers["Activation"+str(idx)].forward(batch_x,params) 
+                          
+        return params
 
-
-
+    def random_rmw(self,x,epsilon,complement,rmw_layer,delete_n):
+        params = self.params
+        for idx in rmw_layer:
+            lst = random.sample(list(range(len(params["W"+str(idx)]))), delete_n[idx-1])
+            if idx == 1:
+                params["W1"] = np.delete(params["W1"],lst,axis=0)
+                params["init_remove"].append(lst)
+            
+            else:    
+                params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],lst,axis=1)
+                params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],lst)
+                params["W"+str(idx)] = np.delete(params["W"+str(idx)],lst,axis=0)
+                
+        return params
+        
 
 
 
@@ -228,13 +176,19 @@ class Network:
 
 
 """
-   以下レイヤーのクラス めんどいので直に書いた  
-   x入力はバッチ全体の画像データ [[画像2]、[画像4],[画像10],・・・
+以下レイヤークラス
 """
+class Toba:
+    def forward(self,x,params):
+        self.x = x
+        for i in params["init_remove"]:
+            self.x = np.delete(self.x,i,1)
+        return self.x
+    def backward(self,dout,params):
+        return None
 
 
-
-
+        
 class Relu:                   
     def __init__ (self):
         self.mask = None
@@ -249,18 +203,6 @@ class Relu:
         dout[self.mask] = 0    #負なら入力値0だから微分値もゼロ、正だと入力＝出力  だと思う・・・
         dx = dout
         return dx
-
-class Identity: #恒等関数(y=x)
-    def __init__(self):
-        pass
-    def forward(self,x,params):
-        out = x.copy()
-        return out
-    
-    def backward(self,dout,params):
-        dx = dout
-        return dx
-    
 
 
 
@@ -278,7 +220,6 @@ class Affine: #3
        out = np.dot(x,w) + b
        return out
     
-    
     def backward(self,dout,params):
         w = params["W"+str(self.idx)]
         b = params["b"+str(self.idx)]
@@ -288,9 +229,7 @@ class Affine: #3
         return dx
 
 
-"""
-以下大事故
-"""
+
 class SoftmaxLoss:
     def __init__(self):
         self.loss = None
@@ -330,4 +269,3 @@ class SoftmaxLoss:
              
         batch_size = y.shape[0]
         return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
-        
