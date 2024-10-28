@@ -49,8 +49,8 @@ class Trainer:
                 if step == "random_rmw":
                     self.params = self.random_rmw()
                     
-        t1 = time.time()    
         self.model.updateparams(self.params)
+        t1 = time.time()    
         acc = self.model.accuracy(self.x_test,self.t_test)
         t2 = time.time()
         elapsed_time = t2-t1
@@ -61,14 +61,14 @@ class Trainer:
         params = self.params
         cnt = 0
         for i in range(maxepoch):
-            batch_mask = np.random.choice(self.data_n, self.batch_size,self.params)
-            x_batch = self.x_train[batch_mask]
-            t_batch = self.t_train[batch_mask]
-            
-            grads = self.model.gradient(x_batch, t_batch, params)
-            for key in grads.keys():
-                params[key] -= self.lr*grads[key]
-            
+            batch_mask = np.random.permutation(np.arange(len(self.x_train)))
+            for j in range(len(self.x_train) // self.batch_size):
+                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                grads = self.model.gradient(x_batch, t_batch, params)
+                for key in grads.keys():
+                    params[key] -= self.lr*grads[key]
+                
             if cnt == self.check:
                 cnt = 0
                 tmp = self.model.accuracy(self.x_test,self.t_test)
@@ -86,16 +86,17 @@ class Trainer:
             self.v[k] = np.zeros_like(v)
             
         for i in range(maxepoch):
-            batch_mask = np.random.choice(self.data_n,self.batch_size,params)
-            x_batch = self.x_train[batch_mask]
-            t_batch = self.t_train[batch_mask]
-            grads = self.model.gradient(x_batch, t_batch, params)
-            crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
-            
-            for key in grads.keys():
-                self.m[key] += (1-self.decreace1) * (grads[key]-self.m[key])
-                self.v[key] += (1-self.decreace2) * (grads[key]**2-self.v[key])
-                params[key] -= crt_lr * self.m[key] / (np.sqrt(self.v[key]) +1e-7)
+            batch_mask = np.random.permutation(np.arange(len(self.x_train)))
+            for j in range(len(self.x_train) // self.batch_size):
+                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                grads = self.model.gradient(x_batch, t_batch, params)
+                crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
+                
+                for key in grads.keys():
+                    self.m[key] += (1-self.decreace1) * (grads[key]-self.m[key])
+                    self.v[key] += (1-self.decreace2) * (grads[key]**2-self.v[key])
+                    params[key] -= crt_lr * self.m[key] / (np.sqrt(self.v[key]) +1e-7)
                 
             if cnt == self.check:
                 cnt = 0
@@ -134,9 +135,9 @@ class Trainer:
         return params
     
     def measure(self):
-        t1 = time.time()
         self.model.updateparams(self.params)
-        acc = self.model.accuracy(self.x_test,self.t_test)
+        t1 = time.time()
+        acc = self.model.predict(self.x_test,self.t_test)
         t2 = time.time()
         elapsed_time = t2-t1
             
