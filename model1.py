@@ -1,27 +1,3 @@
-
-
-"""
-class Trainer
-    バッチ作成、学習の進行 ()-()  optimizerはこちらです(Networkじゃない) ←わかりにくくなったら変える
-class Network 
-    学習、重み計算 ()-()
-class Optimizer          長くなりすぎたらわんちゃん消すかも←消去済み 同ディレクトリoptimizerへ
-    最適化 ()-()
-
-
-class Relu
-    relu順伝播、逆伝播 ()-()
-class Affine
-    全結合層順伝播、逆伝播 ()-()
-class SoftmaxLoss
-    損失関数とソフトマックスの順伝播逆伝播()-()
-class ImportMnist
-    データセット「Mnist」の読み込み (別ファイルでやればよかったな)←別ファイルにしたぞ
-実行系
-具体的方法は後で考えようかなー
-"""
-
-
 import gpu
 if gpu.Use_Gpu:
     import cupy as np
@@ -138,6 +114,7 @@ class Network:
                     scalar[int(complist[n])] += scalar[int(rmlist[n])]
                 params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
                 params["b"+str(idx)] += np.array([np.sum(difflist)]*len(params["b"+str(idx)]))
+                
             if idx == 1:
                 params["init_remove"].append(rmlist)
                 params["W1"] = np.delete(params["W1"],rmlist,axis=0)
@@ -145,7 +122,7 @@ class Network:
                 params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],rmlist,axis=1)
                 params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
                 params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
-            
+                
             print("hidden_layer"+str(idx),": delete",str(len(rmlist))+"nodes")
             if idx == max(rmw_layer) : break
             batch_x = np.delete(batch_x,rmlist,axis=1)
@@ -167,6 +144,81 @@ class Network:
                 params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],lst)
                 params["W"+str(idx)] = np.delete(params["W"+str(idx)],lst,axis=0)
                 
+        return params
+
+
+    def count_rmw(self,x,epsilon,complement,rmw_layer,rmw_n):
+        params = self.params
+        batch_x = self.layers["toba"].forward(x,params)
+
+        for idx in range(1,max(rmw_layer)+1):
+            if idx not in rmw_layer:
+                batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
+                batch_x = self.layers["Activation"+str(idx)].forward(batch_x,params)
+                continue
+            out = []
+            for i in batch_x:
+                y = (i.reshape(-1,1))*params["W"+str(idx)]
+                out.append(y)
+            out=np.asarray(out)
+            out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #y_batch_x
+            
+            pair_list = []
+            displist = []
+            
+            rmlist = []
+            complist = []
+            difflist = []
+            
+            for i in range(0,len(out)-1):
+                for j in range(i+1,len(out)):
+                    diff = out[i] - out[j]
+                    disp = np.average(diff**2) - np.average(diff)**2
+                    pair_list.append([i,j])
+                    displist.append(disp)
+            ziplist = zip(displist,pair_list)
+            zipsort = sorted(ziplist)
+            displist,pair_list = zip(*zipsort)
+
+            rmpair = [pair_list[0]]
+            cnt = 1
+            while len(rmpair)<rmw_n:
+                for i in rmpair:
+                    if i[1] == pair_list[cnt][0] or i[0] == pair_list[cnt][0]:
+                        cnt += 1
+                        break
+                else:
+                    rmpair.append(pair_list[cnt])
+                    cnt +=1
+
+            
+            rmlist = np.array(rmpair).T[0]
+            complist = np.array(rmpair).T[1]
+            difflist = out[rmlist] - out[complist]   
+            difflist = np.mean(difflist,axis=1)    
+            if complement:
+                difflist=np.asarray(difflist)
+                scalar = np.array([1]*len(params["W"+str(idx)]))
+                for n in range(len(rmlist)):
+                    scalar[int(complist[n])] += scalar[int(rmlist[n])]
+                params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
+                diffs = np.sum(difflist)
+                params["b"+str(idx)] += np.array([np.sum(difflist)]*len(params["b"+str(idx)]))
+
+            if idx == 1:
+                params["init_remove"].append(rmlist)
+                params["W1"] = np.delete(params["W1"],rmlist,axis=0)
+            else:
+                params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],rmlist,axis=1)
+                params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
+                params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
+            
+            print("hidden_layer"+str(idx),": delete",str(len(rmlist))+"nodes")
+            if idx == max(rmw_layer) : break
+            batch_x = np.delete(batch_x,rmlist,axis=1)
+            batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
+            batch_x = self.layers["Activation"+str(idx)].forward(batch_x,params) 
+                          
         return params
         
 

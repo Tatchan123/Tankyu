@@ -10,7 +10,7 @@ import time
 
 
 class Trainer:
-    def __init__(self, step, layer, weightinit, optimizer, data, batch_size, lr, check, decreace1=None, decreace2=None, epsilon=None, complement=None, rmw_layer=None, delete_n=None):
+    def __init__(self, step, layer, weightinit, optimizer, data, batch_size, lr, check, decreace1=None, decreace2=None, epsilon=None, complement=None, rmw_layer=None, delete_n=None, rmw_n=None):
         
         self.step = step
         self.layer = layer
@@ -28,6 +28,7 @@ class Trainer:
         self.complemetnt = complement
         self.rmw_layer = rmw_layer
         self.delete_n = delete_n
+        self.rmw_n = rmw_n
         if optimizer == "sgd": self.opt=self.sgd
         if optimizer == "adam": self.opt=self.adam
         
@@ -48,7 +49,9 @@ class Trainer:
                     self.params = self.rmw()
                 if step == "random_rmw":
                     self.params = self.random_rmw()
-                    
+                if step == "count_rmw":
+                    self.params = self.count_rmw()
+
         self.model.updateparams(self.params)
         t1 = time.time()    
         acc = self.model.accuracy(self.x_test,self.t_test)
@@ -113,6 +116,23 @@ class Trainer:
         print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
         
         params = self.model.rmw(self.x_train,self.epsilon,self.complemetnt,self.rmw_layer)
+        
+        self.model.updateparams(params)
+        tmp = [params["W1"].shape[0]]
+        for i in range(1,int(len(self.layer)+2)):
+            tmp = np.append(tmp,params["b"+str(i)].shape)
+        print("Composition of Network :",tmp)
+        print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
+        print("finish rmw ==========================================")
+        return params
+    
+    def count_rmw(self):
+        params = self.params
+        print("start rmw ===========================================")
+        self.model.updateparams(params)
+        print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
+        
+        params = self.model.count_rmw(self.x_train,self.epsilon,self.complemetnt,self.rmw_layer, rmw_n=self.rmw_n)
         
         self.model.updateparams(params)
         tmp = [params["W1"].shape[0]]
