@@ -1,4 +1,4 @@
-import jikken.gpu as gpu
+import gpu
 if gpu.Use_Gpu:
     import cupy as np
 else:
@@ -68,8 +68,8 @@ class Trainer:
         for i in range(maxepoch):
             batch_mask = np.random.permutation(np.arange(len(self.x_train)))
             for j in range(len(self.x_train) // self.batch_size):
-                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
-                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
+                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
                 grads = self.model.gradient(x_batch, t_batch, params)
                 for key in grads.keys():
                     params[key] -= self.lr*grads[key]
@@ -93,8 +93,8 @@ class Trainer:
         for i in range(maxepoch):
             batch_mask = np.random.permutation(np.arange(len(self.x_train)))
             for j in range(len(self.x_train) // self.batch_size):
-                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
-                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)-1]]
+                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
+                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
                 grads = self.model.gradient(x_batch, t_batch, params)
                 crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
                 
@@ -125,12 +125,12 @@ class Trainer:
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
         print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        print("finish rmw ==========================================")
+        print("finish rmw ------------------------------------------")
         return params
     
     def count_rmw(self):
         params = self.params
-        print("start '''''COUNT''''' rmw ===========================================")
+        print("start +++++ COUNT +++++ rmw ===========================================")
         self.model.updateparams(params)
         print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
         
@@ -142,23 +142,25 @@ class Trainer:
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
         print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        print("finish '''''COUNT''''' rmw ==========================================")
+        print("finish +++++ COUNT +++++ rmw ------------------------------------------")
         return params
     
     
     def random_rmw(self):
         params = self.params
-        print("start !!!!!RANDOM!!!!! rmw ==========================================")
+        print("start ????? RANDOM ????? rmw ==========================================")
         params = self.model.random_rmw(self.x_train, self.epsilon, self.complement, self.rmw_layer, delete_n=self.delete_n)
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.layer)+2)):
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
+        print("finish ????? RANDOM ????? rmw -----------------------------------------")
         return params
     
     def auto_epsilon_rmw(self):
         params = self.params
-        print("start ?????AUTO_EPSILON????? rmw ====================================")
+        print("start <<<<< AUTO_EPSILON >>>>> rmw ====================================")
+        print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
         params = self.model.auto_epsilon_rmw(self.x_train, self.complement, self.rmw_layer)
         self.model.updateparams(params)
         tmp = [params["W1"].shape[0]]
@@ -166,7 +168,7 @@ class Trainer:
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
         print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        print("finish ?????AUTO EPSILON????? rmw ===================================")
+        print("finish <<<<< AUTO EPSILON >>>>> rmw -----------------------------------")
         return params
     
 

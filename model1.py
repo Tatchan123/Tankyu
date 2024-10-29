@@ -1,4 +1,4 @@
-import jikken.gpu as gpu
+import gpu
 if gpu.Use_Gpu:
     import cupy as np
 else:
@@ -115,7 +115,7 @@ class Network:
                 for n in range(len(rmlist)):
                     scalar[int(complist[n])] += scalar[int(rmlist[n])]
                 params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
-                params["b"+str(idx)] += np.ones(len(params["b"+str(idx)])) * np.sum(difflist)
+                params["b"+str(idx)] += np.array([np.sum(difflist)]*len(params["b"+str(idx)]))
                 
             if idx == 1:
                 params["init_remove"].append(rmlist)
@@ -243,16 +243,18 @@ class Network:
             out=np.asarray(out)
             #shape : batch, in_size, out_size
             try:
-                epsilon = (len(params["W"+str(idx+1)]) / 2.0) * 1e-3
-                #Wの分散の逆数×定数(定数は勘のマジックナンバーなので注意)
+                s = len(params["W"+str(idx+1)])
+                epsilon = 2 ** -(9 + 0.01*s)
+                
+                
             except:
                 actual_out = np.sum(out,axis=1).reshape(-1) #batch*out_size
                 Sout = np.average(actual_out ** 2) - np.average(actual_out)**2
-                epsilon = 1e-3 / Sout
+                epsilon = 2 ** -(5*Sout**2 + 8)
                 #次の層がsoftmaxのやつ用　出力の分散の逆数を使う
                 
             out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #in_size,batch,out_size
-    
+
             for i in range(0,len(out)-1):
                 if i in complist:
                     continue
@@ -280,7 +282,7 @@ class Network:
                 params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
                 params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
                 
-            print("hidden_layer"+str(idx),": delete",str(len(rmlist))+"nodes")
+            print("hidden_layer"+str(idx-1),": delete",str(len(rmlist))+"nodes")
             if idx == max(rmw_layer) : break
             batch_x = np.delete(batch_x,rmlist,axis=1)
             batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)

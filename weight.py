@@ -1,4 +1,4 @@
-import jikken.gpu as gpu
+import gpu
 if gpu.Use_Gpu:
     import cupy as np
 else:
