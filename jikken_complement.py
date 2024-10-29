@@ -5,6 +5,16 @@ else:
     import numpy as np
     
 from collections import OrderedDict
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../data')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../data')))
+from gpu import *
+if gpu.Use_Gpu:
+    import cupy as np
+else:
+    import numpy as np
 from data.load import load_mnist
 import openpyxl
 import copy
