@@ -1,4 +1,4 @@
-import gpu
+import jikken.gpu as gpu
 if gpu.Use_Gpu:
     import cupy as np
 else:
@@ -25,7 +25,7 @@ class Trainer:
         self.decreace1 = decreace1
         self.decreace2 =decreace2
         self.epsilon = epsilon
-        self.complemetnt = complement
+        self.complement = complement
         self.rmw_layer = rmw_layer
         self.delete_n = delete_n
         self.rmw_n = rmw_n
@@ -51,6 +51,8 @@ class Trainer:
                     self.params = self.random_rmw()
                 if step == "count_rmw":
                     self.params = self.count_rmw()
+                if step == "auto_epsilon":
+                    self.params = self.auto_epsilon_rmw()
 
         self.model.updateparams(self.params)
         t1 = time.time()    
@@ -115,7 +117,7 @@ class Trainer:
         self.model.updateparams(params)
         print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
         
-        params = self.model.rmw(self.x_train,self.epsilon,self.complemetnt,self.rmw_layer)
+        params = self.model.rmw(self.x_train,self.epsilon,self.complement,self.rmw_layer)
         
         self.model.updateparams(params)
         tmp = [params["W1"].shape[0]]
@@ -128,11 +130,11 @@ class Trainer:
     
     def count_rmw(self):
         params = self.params
-        print("start rmw ===========================================")
+        print("start '''''COUNT''''' rmw ===========================================")
         self.model.updateparams(params)
         print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
         
-        params = self.model.count_rmw(self.x_train,self.epsilon,self.complemetnt,self.rmw_layer, rmw_n=self.rmw_n)
+        params = self.model.count_rmw(self.x_train,self.epsilon,self.complement,self.rmw_layer, rmw_n=self.rmw_n)
         
         self.model.updateparams(params)
         tmp = [params["W1"].shape[0]]
@@ -140,20 +142,34 @@ class Trainer:
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
         print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        print("finish rmw ==========================================")
+        print("finish '''''COUNT''''' rmw ==========================================")
         return params
     
     
     def random_rmw(self):
         params = self.params
-        print("RANDOM R M W !!!!!!!!!!!!!")
-        params = self.model.random_rmw(self.x_train, self.epsilon, self.complemetnt, self.rmw_layer, delete_n=self.delete_n)
+        print("start !!!!!RANDOM!!!!! rmw ==========================================")
+        params = self.model.random_rmw(self.x_train, self.epsilon, self.complement, self.rmw_layer, delete_n=self.delete_n)
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.layer)+2)):
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
         return params
     
+    def auto_epsilon_rmw(self):
+        params = self.params
+        print("start ?????AUTO_EPSILON????? rmw ====================================")
+        params = self.model.auto_epsilon_rmw(self.x_train, self.complement, self.rmw_layer)
+        self.model.updateparams(params)
+        tmp = [params["W1"].shape[0]]
+        for i in range(1,int(len(self.layer)+2)):
+            tmp = np.append(tmp,params["b"+str(i)].shape)
+        print("Composition of Network :",tmp)
+        print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
+        print("finish ?????AUTO EPSILON????? rmw ===================================")
+        return params
+    
+
     def measure(self):
         self.model.updateparams(self.params)
         t1 = time.time()

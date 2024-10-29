@@ -1,4 +1,4 @@
-import gpu
+import jikken.gpu as gpu
 if gpu.Use_Gpu:
     import cupy as np
 else:
@@ -11,7 +11,7 @@ import copy
 from model1 import *
 from trainer import *
 
-
+"""ここはエクセル打ち込みとか発表するための実験をするとこってかんじで"""
 
 """
     self, step, layer, weightinit, optimizer, data, batch_size, lr, check, (decreace1, decreace2, epsilon, complement, rmw_layer, delete_n)
