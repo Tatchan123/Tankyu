@@ -54,7 +54,7 @@ for layer_n in layern:
                 dn = Trainer(step=["count_rmw"], layer=layer, weightinit=pa, optimizer="sgd", data=data, batch_size=100, lr=0.04, 
                             check=50,epsilon=[1e-6,1e-2,1e-2,1.2e-2], complement=True, rmw_layer=rmwlayer,rmw_n=rmw_n)
                 if str(layer_size)+"_"+str(layer_n)+"_"+str(i+1) in result:
-                    result[str(layer_size)+"_"+str(layer_n)+"_"+str(i)].append(dn.fit())
+                    result[str(layer_size)+"_"+str(layer_n)+"_"+str(i+1)].append(dn.fit())
                 else:   result[str(layer_size)+"_"+str(layer_n)+"_"+str(i+1)] = [dn.fit()]
     print(layer_n,layer_size)
 
