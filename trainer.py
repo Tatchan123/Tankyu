@@ -55,7 +55,7 @@ class Trainer:
                     self.params = self.auto_epsilon_rmw()
 
         self.model.updateparams(self.params)
-        t1 = time.time()    
+        t1 = time.time()
         acc = self.model.accuracy(self.x_test,self.t_test)
         t2 = time.time()
         elapsed_time = t2-t1
@@ -64,7 +64,6 @@ class Trainer:
 
     def sgd(self,maxepoch):
         params = self.params
-        cnt = 0
         for i in range(maxepoch):
             batch_mask = np.random.permutation(np.arange(len(self.x_train)))
             for j in range(len(self.x_train) // self.batch_size):
@@ -74,11 +73,10 @@ class Trainer:
                 for key in grads.keys():
                     params[key] -= self.lr*grads[key]
                 
-            if cnt == self.check:
-                cnt = 0
+            if (i+1)% self.check == 0:
                 tmp = self.model.accuracy(self.x_test,self.t_test)
-                print("epoch:",str(i)," | ",str(tmp))
-            cnt += 1
+                print("epoch:",str(i+1)," | ",str(tmp))
+
         return params
     
     
@@ -103,10 +101,10 @@ class Trainer:
                     self.v[key] += (1-self.decreace2) * (grads[key]**2-self.v[key])
                     params[key] -= crt_lr * self.m[key] / (np.sqrt(self.v[key]) +1e-7)
                 
-            if cnt == self.check:
+            if (i+1) % self.check ==0:
                 cnt = 0
                 tmp = self.model.accuracy(self.x_test,self.t_test)
-                print("epoch:",str(i)," | ",str(tmp))
+                print("epoch:",str(i+1)," | ",str(tmp))
             cnt += 1        
         return params
     
@@ -149,11 +147,13 @@ class Trainer:
     def random_rmw(self):
         params = self.params
         print("start ????? RANDOM ????? rmw ==========================================")
+        print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
         params = self.model.random_rmw(self.x_train, self.rmw_layer, delete_n=self.delete_n)
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.layer)+2)):
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
+        print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
         print("finish ????? RANDOM ????? rmw -----------------------------------------")
         return params
     
