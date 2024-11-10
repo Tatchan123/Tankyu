@@ -133,7 +133,7 @@ class Network:
                           
         return params
 
-    def random_rmw(self,x,epsilon,complement,rmw_layer,delete_n):
+    def random_rmw(self,x,rmw_layer,delete_n):
         params = self.params
         for idx in rmw_layer:
             lst = random.sample(list(range(len(params["W"+str(idx)]))), delete_n[idx-1])

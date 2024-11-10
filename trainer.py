@@ -149,7 +149,7 @@ class Trainer:
     def random_rmw(self):
         params = self.params
         print("start ????? RANDOM ????? rmw ==========================================")
-        params = self.model.random_rmw(self.x_train, self.epsilon, self.complement, self.rmw_layer, delete_n=self.delete_n)
+        params = self.model.random_rmw(self.x_train, self.rmw_layer, delete_n=self.delete_n)
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.layer)+2)):
             tmp = np.append(tmp,params["b"+str(i)].shape)
