@@ -21,18 +21,6 @@ print("start")
 data_n = 6400
 (x_train, t_train),(x_test,t_test) = load_mnist(normalize=False,flatten=False)
 data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[:data_n], "t_test":t_test[:data_n]}
-for i in range(100):
-    if t_train[i] == 4:
-        print(x_train[i])
-        x = x_train[i].reshape(28,28)
-        wb = openpyxl.load_workbook('sss.xlsx')
-        sheet = wb["Sheet1"]
-        for i in range(28):
-            for j in range(28):
-                sheet.cell(row=i, column=j).value = x[i][j]
-        wb.close()
-        break
-t = np.argmax(data["t_test"],axis=1)
 
 
 sgd_result = []
