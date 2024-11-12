@@ -7,6 +7,7 @@ else:
 from model1 import *
 from weight import *
 import time
+import sys
 
 
 class Trainer:
@@ -59,7 +60,7 @@ class Trainer:
         acc = self.model.accuracy(self.x_test,self.t_test)
         t2 = time.time()
         elapsed_time = t2-t1
-        return [float(acc),elapsed_time*1000]
+        return [float(acc),self.get_memory()]
 
 
     def sgd(self,maxepoch):
@@ -178,4 +179,16 @@ class Trainer:
         acc = self.model.predict(self.x_test,self.t_test)
         t2 = time.time()
         elapsed_time = t2-t1
-            
+
+        return elapsed_time
+
+    def get_memory(self): #変数のメモリ使用量を取得(画像1枚、重み、バイアス),単位はバイト
+        mmlist = []
+        x_single = self.x_train[0]
+        mmlist.append(x_single.nbytes)
+        
+        for p in self.params.values():
+            mmlist.append(p.nbytes)
+        
+        print(sum(mmlist))
+        return sum(mmlist)

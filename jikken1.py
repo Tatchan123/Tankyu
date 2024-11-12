@@ -19,8 +19,28 @@ from trainer import *
 print("start")
 
 data_n = 6400
-(x_train, t_train),(x_test,t_test) = load_mnist(normalize=False,flatten=False)
+(x_train, t_train),(x_test,t_test) = load_mnist(normalize=True)
+
+if gpu.Use_Gpu:
+    x_train = np.asarray(x_train)
+    t_train = np.asarray(t_train)
+    x_test = np.asarray(x_test)
+    t_test = np.asarray(t_test)
+else:
+    try:
+        x_train = x_train.get()
+        t_train = t_train.get()
+        x_test = x_test.get()
+        t_test = t_test.get()
+    except:
+        pass
+
+
+
+
+
 data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[:data_n], "t_test":t_test[:data_n]}
+
 
 
 sgd_result = []
@@ -61,5 +81,5 @@ for i in range(len(randomrmw_result)):
     sheet.cell(row=7, column=i+3).value = randomrmw_result[i][1]
 
 sheet.cell(row=1, column=1).value = 0
-wb.save('100result1.xlsx')
+wb.save('100result_memory.xlsx')
 wb.close()

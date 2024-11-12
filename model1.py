@@ -6,6 +6,7 @@ else:
     
 from collections import OrderedDict
 import random
+import copy
 
 class Network:
     def __init__ (self, input_size, output_size, layer_size, params, toba, activation="relu"):
@@ -79,7 +80,7 @@ class Network:
 
 
     def rmw(self,x,epsilon,complement,rmw_layer):
-        params = self.params
+        params = copy.deepcopy(self.params)
         batch_x = self.layers["toba"].forward(x,params)
 
         for idx in range(1,max(rmw_layer)+1):
@@ -335,11 +336,12 @@ class Affine: #3
         self.db = None
         
     def forward(self,x,params):
-       self.x = x
-       w = params["W"+str(self.idx)]
-       b = params["b"+str(self.idx)]
-       out = np.dot(x,w) + b
-       return out
+        self.x = x
+        w = params["W"+str(self.idx)]
+        b = params["b"+str(self.idx)]
+
+        out = np.dot(x,w) + b
+        return out
     
     def backward(self,dout,params):
         w = params["W"+str(self.idx)]
