@@ -47,20 +47,20 @@ class Trainer:
                 self.params = self.opt(step)
             else:
                 if step == "rmw":
-                    self.params = self.rmw()
+                    self.params, dacc = self.rmw()
                 if step == "random_rmw":
                     self.params = self.random_rmw()
                 if step == "count_rmw":
                     self.params = self.count_rmw()
                 if step == "auto_epsilon":
                     self.params = self.auto_epsilon_rmw()
-
+        
         self.model.updateparams(self.params)
         t1 = time.time()
         acc = self.model.accuracy(self.x_test,self.t_test)
         t2 = time.time()
         elapsed_time = t2-t1
-        return [float(acc),self.get_memory()]
+        return float(dacc)
 
 
     def sgd(self,maxepoch):
@@ -114,7 +114,8 @@ class Trainer:
         params = self.params
         print("start rmw ===========================================")
         self.model.updateparams(params)
-        print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
+        acc1 = self.model.accuracy(self.x_test,self.t_test)
+        print("accuracy before rmw :",str(acc1))
         
         params = self.model.rmw(self.x_train,self.epsilon,self.complement,self.rmw_layer)
         
@@ -123,9 +124,10 @@ class Trainer:
         for i in range(1,int(len(self.layer)+2)):
             tmp = np.append(tmp,params["b"+str(i)].shape)
         print("Composition of Network :",tmp)
-        print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
+        acc2 = self.model.accuracy(self.x_test,self.t_test)
+        print("accuracy after rmw :",str(acc2))
         print("finish rmw ------------------------------------------")
-        return params
+        return params, acc2-acc1
     
     def count_rmw(self):
         params = self.params
@@ -190,5 +192,4 @@ class Trainer:
         for p in self.params.values():
             mmlist.append(p.nbytes)
         
-        print(sum(mmlist))
         return sum(mmlist)

@@ -97,26 +97,29 @@ class Network:
                 y = (i.reshape(-1,1))*params["W"+str(idx)]
                 out.append(y)
             out=np.asarray(out)
-            out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #y_batch_x
-                
+            out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #x_batch_y
+            # out = np.transpose(out,(1,0,2))
+
             for i in range(0,len(out)-1):
                 if i in complist:
                     continue
                 for j in range(i+1,len(out)):
                     diff = out[i] - out[j]
-                    disp = np.average(diff**2) - np.average(diff)**2
+                    disp = np.var(diff,axis=0)
                     if disp <= epsilon[idx-1]:
                         rmlist.append(i)
                         complist.append(j)
                         difflist.append(np.average(diff))
+                        # difflist.append(np.average(diff,axis=0))
                         break
             if complement:
                 difflist=np.asarray(difflist)
-                scalar = np.array([1]*len(params["W"+str(idx)]))
+                scalar = np.ones(len(params["W"+str(idx)]))
                 for n in range(len(rmlist)):
                     scalar[int(complist[n])] += scalar[int(rmlist[n])]
                 params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
                 params["b"+str(idx)] += np.array([np.sum(difflist)]*len(params["b"+str(idx)]))
+                # params["b"+str(idx)] += np.sum(difflist,axis=0)
                 
             if idx == 1:
                 params["init_remove"].append(rmlist)
@@ -126,7 +129,7 @@ class Network:
                 params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
                 params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
                 
-            print("hidden_layer"+str(idx),": delete",str(len(rmlist))+"nodes")
+            print("layer"+str(idx),": delete",str(len(rmlist))+"nodes")
             if idx == max(rmw_layer) : break
             batch_x = np.delete(batch_x,rmlist,axis=1)
             batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
@@ -216,7 +219,7 @@ class Network:
                 params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
                 params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
             
-            print("hidden_layer"+str(idx),": delete",str(len(rmlist))+"nodes")
+            print("layer"+str(idx),": delete",str(len(rmlist))+"nodes")
             if idx == max(rmw_layer) : break
             batch_x = np.delete(batch_x,rmlist,axis=1)
             batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
@@ -283,7 +286,7 @@ class Network:
                 params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
                 params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
                 
-            print("hidden_layer"+str(idx-1),": delete",str(len(rmlist))+"nodes")
+            print("layer"+str(idx-1),": delete",str(len(rmlist))+"nodes")
             if idx == max(rmw_layer) : break
             batch_x = np.delete(batch_x,rmlist,axis=1)
             batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
