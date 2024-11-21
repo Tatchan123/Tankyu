@@ -40,8 +40,8 @@ else:
 
 
 data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[:data_n], "t_test":t_test[:data_n]}
-
-
+layer1 = [100,100,100]
+opt1 = {"opt":"sgd"}
 
 sgd_result = []
 
@@ -49,18 +49,18 @@ toba_result = []
 randomrmw_result = []
 for i in range(100):
     print(str(i),"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    sgd = Trainer(step=[200], layer=[100,100,100], weightinit=He, optimizer="sgd", data=data, batch_size=64, lr=0.04, check=50)
+    sgd = Trainer(step=[200], layer=layer1, weightinit=He, optimizer=opt1, data=data, batch_size=64, lr=0.04, check=50)
     sgd_result.append(sgd.fit())
 
     parameter = sgd.params
 
     cpparams = copy.deepcopy(parameter)
-    complement = Trainer(step=["rmw"], layer=[100,100,100], weightinit=cpparams, optimizer="sgd", data=data, batch_size=64, lr=0.001, 
+    complement = Trainer(step=["rmw"], layer=layer1, weightinit=cpparams, optimizer=opt1, data=data, batch_size=64, lr=0.001, 
                      check=50, epsilon=[1e-6,3e-3,1.5e-3,1.2e-3], complement=True, rmw_layer=[2,3,4])
     toba_result.append(complement.fit())
 
     rrparams = copy.deepcopy(parameter)
-    randomrmw = Trainer(step=["random_rmw"], layer=[100,100,100], weightinit=rrparams, optimizer="sgd", data=data, batch_size=64, lr=0.001, 
+    randomrmw = Trainer(step=["random_rmw"], layer=[100,100,100], weightinit=rrparams, optimizer=opt1, data=data, batch_size=64, lr=0.001, 
                      check=50, rmw_layer=[2,3,4],delete_n=[0,10,10,7])
     randomrmw_result.append(randomrmw.fit())
 

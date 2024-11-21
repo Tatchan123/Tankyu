@@ -11,7 +11,7 @@ import sys
 
 
 class Trainer:
-    def __init__(self, step, layer, weightinit, optimizer, data, batch_size, lr, check, decreace1=None, decreace2=None, epsilon=None, complement=None, rmw_layer=None, delete_n=None, rmw_n=None):
+    def __init__(self, step, layer, weightinit, optimizer, data, batch_size, lr, check, epsilon=None, complement=None, rmw_layer=None, delete_n=None, rmw_n=None):
         
         self.step = step
         self.layer = layer
@@ -19,19 +19,16 @@ class Trainer:
         self.t_train = data["t_train"]
         self.x_test = data["x_test"]
         self.t_test = data["t_test"]
-        self.data_n = len(self.x_train)
+        self.data = data
         self.batch_size = batch_size
         self.lr = lr
         self.check = check
-        self.decreace1 = decreace1
-        self.decreace2 =decreace2
         self.epsilon = epsilon
         self.complement = complement
         self.rmw_layer = rmw_layer
         self.delete_n = delete_n
         self.rmw_n = rmw_n
-        if optimizer == "sgd": self.opt=self.sgd
-        if optimizer == "adam": self.opt=self.adam
+        self.optimizer = Optimizer(self.model,optimizer)
         
         try:
             wi = weightinit()
@@ -44,7 +41,7 @@ class Trainer:
     def fit(self):
         for step in self.step:
             if type(step) == int:
-                self.params = self.opt(step)
+                self.optimizer.fit(self.data,self.batch_size,step,self.lr,self.check)
             else:
                 if step == "rmw":
                     self.params, dacc = self.rmw()
@@ -63,51 +60,6 @@ class Trainer:
         return float(dacc)
 
 
-    def sgd(self,maxepoch):
-        params = self.params
-        for i in range(maxepoch):
-            batch_mask = np.random.permutation(np.arange(len(self.x_train)))
-            for j in range(len(self.x_train) // self.batch_size):
-                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
-                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
-                grads = self.model.gradient(x_batch, t_batch, params)
-                for key in grads.keys():
-                    params[key] -= self.lr*grads[key]
-                
-            if (i+1)% self.check == 0:
-                tmp = self.model.accuracy(self.x_test,self.t_test)
-                print("epoch:",str(i+1)," | ",str(tmp))
-
-        return params
-    
-    
-    def adam(self,maxepoch):
-        params = self.params
-        cnt = 0
-        self.m,self.v = {},{}
-        for k,v in params.items():
-            self.m[k] = np.zeros_like(v)
-            self.v[k] = np.zeros_like(v)
-            
-        for i in range(maxepoch):
-            batch_mask = np.random.permutation(np.arange(len(self.x_train)))
-            for j in range(len(self.x_train) // self.batch_size):
-                x_batch = self.x_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
-                t_batch = self.t_train[batch_mask[self.batch_size*j : self.batch_size*(j+1)]]
-                grads = self.model.gradient(x_batch, t_batch, params)
-                crt_lr = self.lr * np.sqrt(1.0 - self.decreace2**(cnt+1)) / (1.0 - self.decreace1**(cnt+1))
-                
-                for key in grads.keys():
-                    self.m[key] += (1-self.decreace1) * (grads[key]-self.m[key])
-                    self.v[key] += (1-self.decreace2) * (grads[key]**2-self.v[key])
-                    params[key] -= crt_lr * self.m[key] / (np.sqrt(self.v[key]) +1e-7)
-                
-            if (i+1) % self.check ==0:
-                cnt = 0
-                tmp = self.model.accuracy(self.x_test,self.t_test)
-                print("epoch:",str(i+1)," | ",str(tmp))
-            cnt += 1        
-        return params
     
     
     def rmw(self):
@@ -193,3 +145,61 @@ class Trainer:
             mmlist.append(p.nbytes)
         
         return sum(mmlist)
+
+
+class Optimizer():
+    def __init__(self,model,opt_dict,scheduler_dict=None):
+        self.model = model
+        opt = opt_dict["opt"]
+        if opt == "sgd":
+            self.fit = self.SGD
+        elif opt == "adam":
+            self.fit = self.Adam
+            self.decreace1 = opt_dict["dec1"]
+            self.decreace2 = opt_dict["dec2"]
+
+    def SGD(self,data,batchsize,maxepoch,lr,check):
+        x_train = data["x_train"]
+        t_train = data["t_train"]
+        x_test = data["x_test"]
+        t_test = data["t_test"]
+        for i in range(maxepoch):
+            batch_mask = np.random.permutation(np.arange(len(x_train)))
+            for j in range(len(x_train) // batchsize):
+                x_batch = x_train[batch_mask[batchsize*j : batchsize*(j+1)]]
+                t_batch = t_train[batch_mask[batchsize*j : batchsize*(j+1)]]
+                grads = self.model.gradient(x_batch, t_batch, self.model.params)
+                for key in grads.keys():
+                    self.model.params[key] -= lr*grads[key]
+                
+            if (i+1) % check == 0:
+                acc = self.model.accuracy(x_test,t_test)
+                print("epoch:",str(i)," | ",str(acc))
+
+    def Adam(self,data,batchsize,maxepoch,lr,check):
+        x_train = data["x_train"]
+        t_train = data["t_train"]
+        x_test = data["x_test"]
+        t_test = data["t_test"]
+        self.m,self.v = {},{}
+        for k,v in self.model.params.items():
+            self.m[k] = np.zeros_like(v)
+            self.v[k] = np.zeros_like(v)
+            
+        for i in range(maxepoch):
+            batch_mask = np.random.permutation(np.arange(len(x_train)))
+    
+            for j in range(len(x_train) // batchsize):
+                x_batch = self.x_train[batch_mask[batchsize*j : batchsize*(j+1)]]
+                t_batch = self.t_train[batch_mask[batchsize*j : batchsize*(j+1)]]
+                grads = self.model.gradient(x_batch, t_batch, self.model.params)
+                crt_lr = lr * np.sqrt(1.0 - self.decreace2**(i*batchsize + j+1)) / (1.0 - self.decreace1**(i*batchsize + j+1))
+                
+                for key in grads.keys():
+                    self.m[key] += (1-self.decreace1) * (grads[key]-self.m[key])
+                    self.v[key] += (1-self.decreace2) * (grads[key]**2-self.v[key])
+                    self.model.params[key] -= crt_lr * self.m[key] / (np.sqrt(self.v[key]) +1e-7)
+                
+            if (i+1) % check == 0:
+                tmp = self.model.accuracy(x_test,t_test)
+                print("epoch:",str(i)," | ",str(tmp))
