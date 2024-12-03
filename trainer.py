@@ -8,10 +8,10 @@ from model1 import *
 from weight import *
 import time
 import sys
-
+from Toba_w import *
 
 class Trainer:
-    def __init__(self, step, layer, weightinit, optimizer, data, batch_size, lr, check, epsilon=None, complement=None, rmw_layer=None, delete_n=None, rmw_n=None):
+    def __init__(self, step, layer, weightinit, optimizer, data, batch_size, lr, check, tobaoption):
         
         self.step = step
         self.layer = layer
@@ -23,12 +23,7 @@ class Trainer:
         self.batch_size = batch_size
         self.lr = lr
         self.check = check
-        self.epsilon = epsilon
-        self.complement = complement
-        self.rmw_layer = rmw_layer
-        self.delete_n = delete_n
-        self.rmw_n = rmw_n
-        self.optimizer = Optimizer(self.model,optimizer)
+        self.tobaoption = tobaoption
         
         try:
             wi = weightinit()
@@ -37,115 +32,43 @@ class Trainer:
             self.params = weightinit
         self.params["init_remove"] = np.array([])
         self.model = Network(input_size=784, output_size=10, layer_size=layer, params=self.params, activation=Relu, toba=True)
+        self.optimizer = Optimizer(self.model,optimizer)
         
     def fit(self):
         for step in self.step:
             if type(step) == int:
-                self.optimizer.fit(self.data,self.batch_size,step,self.lr,self.check)
+                self.optimizer.fit(self.params,self.data,self.batch_size,step,self.lr,self.check)
             else:
-                if step == "rmw":
-                    self.params, dacc = self.rmw()
-                if step == "random_rmw":
-                    self.params = self.random_rmw()
-                if step == "count_rmw":
-                    self.params = self.count_rmw()
-                if step == "auto_epsilon":
-                    self.params = self.auto_epsilon_rmw()
-        
-        self.model.updateparams(self.params)
+                tobafunc = eval(step)
+                tobaname = step
+                self.params,result = self.toba_w(tobafunc,tobaname)
+                
         t1 = time.time()
-        acc = self.model.accuracy(self.x_test,self.t_test)
         t2 = time.time()
         elapsed_time = t2-t1
-        return float(dacc)
+        result["time"] = elapsed_time
+        return result
 
 
-    
-    
-    def rmw(self):
+    def toba_w(self,toba_type,toba_name):
         params = self.params
-        print("start rmw ===========================================")
+        print("start Toba_W :",toba_name,"------------------------------------------")
         self.model.updateparams(params)
         acc1 = self.model.accuracy(self.x_test,self.t_test)
-        print("accuracy before rmw :",str(acc1))
+        print("    accuracy before Toba_W :", str(acc1))
         
-        params = self.model.rmw(self.x_train,self.epsilon,self.complement,self.rmw_layer)
-        
+        params = toba_type(self.model,self.x_train,self.tobaoption)
         self.model.updateparams(params)
+        
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.layer)+2)):
             tmp = np.append(tmp,params["b"+str(i)].shape)
-        print("Composition of Network :",tmp)
+        print("    Composition of Network :",tmp)
         acc2 = self.model.accuracy(self.x_test,self.t_test)
-        print("accuracy after rmw :",str(acc2))
-        print("finish rmw ------------------------------------------")
-        return params, acc2-acc1
-    
-    def count_rmw(self):
-        params = self.params
-        print("start +++++ COUNT +++++ rmw ===========================================")
-        self.model.updateparams(params)
-        print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
+        print("    accuracy after rmw :",str(acc2))
+        print("finish Toba_W ------------------------------------------")
+        return params, {"dacc":acc2-acc1,"acc":acc2}
         
-        params = self.model.count_rmw(self.x_train,self.epsilon,self.complement,self.rmw_layer, rmw_n=self.rmw_n)
-        
-        self.model.updateparams(params)
-        tmp = [params["W1"].shape[0]]
-        for i in range(1,int(len(self.layer)+2)):
-            tmp = np.append(tmp,params["b"+str(i)].shape)
-        print("Composition of Network :",tmp)
-        print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        print("finish +++++ COUNT +++++ rmw ------------------------------------------")
-        return params
-    
-    
-    def random_rmw(self):
-        params = self.params
-        print("start ????? RANDOM ????? rmw ==========================================")
-        print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        params = self.model.random_rmw(self.x_train, self.rmw_layer, delete_n=self.delete_n)
-        tmp = [params["W1"].shape[0]]
-        for i in range(1,int(len(self.layer)+2)):
-            tmp = np.append(tmp,params["b"+str(i)].shape)
-        print("Composition of Network :",tmp)
-        print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        print("finish ????? RANDOM ????? rmw -----------------------------------------")
-        return params
-    
-    def auto_epsilon_rmw(self):
-        params = self.params
-        print("start <<<<< AUTO_EPSILON >>>>> rmw ====================================")
-        print("accuracy before rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        params = self.model.auto_epsilon_rmw(self.x_train, self.complement, self.rmw_layer)
-        self.model.updateparams(params)
-        tmp = [params["W1"].shape[0]]
-        for i in range(1,int(len(self.layer)+2)):
-            tmp = np.append(tmp,params["b"+str(i)].shape)
-        print("Composition of Network :",tmp)
-        print("accuracy after rmw :",str(self.model.accuracy(self.x_test,self.t_test)))
-        print("finish <<<<< AUTO EPSILON >>>>> rmw -----------------------------------")
-        return params
-    
-
-    def measure(self):
-        self.model.updateparams(self.params)
-        t1 = time.time()
-        acc = self.model.predict(self.x_test,self.t_test)
-        t2 = time.time()
-        elapsed_time = t2-t1
-
-        return elapsed_time
-
-    def get_memory(self): #変数のメモリ使用量を取得(画像1枚、重み、バイアス),単位はバイト
-        mmlist = []
-        x_single = self.x_train[0]
-        mmlist.append(x_single.nbytes)
-        
-        for p in self.params.values():
-            mmlist.append(p.nbytes)
-        
-        return sum(mmlist)
-
 
 class Optimizer():
     def __init__(self,model,opt_dict,scheduler_dict=None):
@@ -158,7 +81,9 @@ class Optimizer():
             self.decreace1 = opt_dict["dec1"]
             self.decreace2 = opt_dict["dec2"]
 
-    def SGD(self,data,batchsize,maxepoch,lr,check):
+
+    def SGD(self,params, data,batchsize,maxepoch,lr,check):
+        self.model.updateparams(params)
         x_train = data["x_train"]
         t_train = data["t_train"]
         x_test = data["x_test"]
@@ -175,8 +100,11 @@ class Optimizer():
             if (i+1) % check == 0:
                 acc = self.model.accuracy(x_test,t_test)
                 print("epoch:",str(i)," | ",str(acc))
-
-    def Adam(self,data,batchsize,maxepoch,lr,check):
+        return self.model.params
+    
+        
+    def Adam(self,params,data,batchsize,maxepoch,lr,check):
+        self.model.updateparams(params)
         x_train = data["x_train"]
         t_train = data["t_train"]
         x_test = data["x_test"]
@@ -203,3 +131,5 @@ class Optimizer():
             if (i+1) % check == 0:
                 tmp = self.model.accuracy(x_test,t_test)
                 print("epoch:",str(i)," | ",str(tmp))
+
+            return self.model.params
