@@ -294,7 +294,67 @@ class Network:
                           
         return params
         
+    def corrcoref_rmw(self,x,epsilon,complement,rmw_layer):
+        params = copy.deepcopy(self.params)
+        batch_x = self.layers["toba"].forward(x,params)
 
+        for idx in range(1,max(rmw_layer)+1):
+            if idx not in rmw_layer:
+                batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
+                batch_x = self.layers["Activation"+str(idx)].forward(batch_x,params)
+                continue
+            
+            rmlist = []
+            complist = []
+            difflist = []
+            slopelist = []
+            yinterlist = []
+            out = []
+            for i in batch_x:
+                y = (i.reshape(-1,1))*params["W"+str(idx)]
+                out.append(y)
+            out=np.asarray(out)
+            out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #x_batch_y
+            # out = np.transpose(out,(1,0,2))
+
+            for i in range(0,len(out)-1):
+                if i in complist:
+                    continue
+                for j in range(i+1,len(out)):
+                    cor = np.corrcoef[0][1]
+
+                    if abs(cor) <= epsilon[idx-1]:
+                        rmlist.append(i)
+                        complist.append(j)
+                        sxy = np.cov(i,j)[0][1] # i=x , j=y
+                        varx2 = np.var(i**2)
+                        slope = sxy/varx2
+                        yinter = np.average(j) - slope*np.average(i)
+                        slopelist.append(slope)
+                        yinterlist.append(yinter)
+                        break
+            if complement:
+                difflist=np.asarray(difflist)
+                scalar = np.ones(len(params["W"+str(idx)]))
+                for n in range(len(rmlist)):
+                    scalar[int(complist[n])] += scalar[int(rmlist[n])]
+                params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
+                params["b"+str(idx)] += np.array([np.sum(difflist)]*len(params["b"+str(idx)]))
+                # params["b"+str(idx)] += np.sum(difflist,axis=0)
+                
+            if idx == 1:
+                params["init_remove"].append(rmlist)
+                params["W1"] = np.delete(params["W1"],rmlist,axis=0)
+            else:
+                params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],rmlist,axis=1)
+                params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
+                params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
+                
+            print("layer"+str(idx),": delete",str(len(rmlist))+"nodes")
+            if idx == max(rmw_layer) : break
+            batch_x = np.delete(batch_x,rmlist,axis=1)
+            batch_x = self.layers["Affine"+str(idx)].forward(batch_x,params)
+            batch_x = self.layers["Activation"+str(idx)].forward(batch_x,params) 
 
 
 
