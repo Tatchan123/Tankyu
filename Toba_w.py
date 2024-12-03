@@ -229,7 +229,8 @@ def auto_epsilon_rmw(model,x,tobaoption):
     
     
     
-def corrcoref_rmw(model,x,epsilon,complement,rmw_layer):
+def corrcoref_rmw(model,x,tobaoption):
+    epsilon, complement, rmw_layer = [tobaoption[key] for key in ["epsilon", "complement", "rmw_layer"]]
     params = copy.deepcopy(model.params)
     batch_x = model.layers["toba"].forward(x,params)
     for idx in range(1,max(rmw_layer)+1):
@@ -240,38 +241,44 @@ def corrcoref_rmw(model,x,epsilon,complement,rmw_layer):
         
         rmlist = []
         complist = []
-        difflist = []
-        slopelist = []
-        yinterlist = []
+        alist = []
+        blist = []
         out = []
         for i in batch_x:
             y = (i.reshape(-1,1))*params["W"+str(idx)]
             out.append(y)
         out=np.asarray(out)
         out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #x_batch_y
-        # out = np.transpose(out,(1,0,2))
         for i in range(0,len(out)-1):
             if i in complist:
                 continue
             for j in range(i+1,len(out)):
-                cor = np.corrcoef[0][1]
-                if abs(cor) <= epsilon[idx-1]:
+                i_val = out[i]
+                j_val = out[j]
+                sxy = np.average(i_val*j_val) - np.average(i_val)*np.average(j_val)
+                vari = (np.average(i_val**2)) - (np.average(i_val))**2
+                varj = (np.average(j_val**2)) - (np.average(j_val))**2
+                cor = sxy / (np.sqrt(vari)*np.sqrt(varj) + 0.00000001) #1e-10みたいな表記だとうまくいかないなぜ
+                #print(sxy,vari,varj)
+                #print("    ",cor)
+                if np.isnan(cor): print(sxy,vari,varj,cor)
+                if abs(cor) >= epsilon[idx-1]:
                     rmlist.append(i)
-                    complist.append(j)
-                    sxy = np.cov(i,j)[0][1] # i=x , j=y
-                    varx2 = np.var(i**2)
-                    slope = sxy/varx2
-                    yinter = np.average(j) - slope*np.average(i)
-                    slopelist.append(slope)
-                    yinterlist.append(yinter)
+                    complist.append(j)                 # i=x , j=yとしてy=ax+bに近似
+                    a = sxy/vari
+                    b = np.average(j_val) - a*np.average(i_val)
+                    alist.append(a)
+                    blist.append(b)
                     break
+                
+        blist = np.array(blist)
+        alist = np.array(alist)
         if complement:
-            difflist=np.asarray(difflist)
             scalar = np.ones(len(params["W"+str(idx)]))
             for n in range(len(rmlist)):
-                scalar[int(complist[n])] += scalar[int(rmlist[n])]
+                scalar[int(complist[n])] += alist[n]
             params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
-            params["b"+str(idx)] += np.array([np.sum(difflist)]*len(params["b"+str(idx)]))
+            params["b"+str(idx)] = params["b"+str(idx)] + np.sum(blist)
             # params["b"+str(idx)] += np.sum(difflist,axis=0)
             
         if idx == 1:
@@ -288,3 +295,4 @@ def corrcoref_rmw(model,x,epsilon,complement,rmw_layer):
         batch_x = np.delete(batch_x,rmlist,axis=1)
         batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
         batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params) 
+    return params

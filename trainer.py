@@ -69,6 +69,8 @@ class Trainer:
         print("finish Toba_W ------------------------------------------")
         return params, {"dacc":acc2-acc1,"acc":acc2}
         
+        
+        
 
 class Optimizer():
     def __init__(self,model,opt_dict,scheduler_dict=None):
