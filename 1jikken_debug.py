@@ -40,5 +40,5 @@ test1.fit()
 # test4.fit()
 
 
-
+#githubブラウザ上で編集できるのか
 
