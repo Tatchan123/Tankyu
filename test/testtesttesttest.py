@@ -4,3 +4,4 @@ def test():
 func = test
 func()
 print(str(func))
+str(test)

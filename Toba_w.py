@@ -12,7 +12,8 @@ import copy
 def rmw(model,x,tobaoption):
     epsilon, complement, rmw_layer = [tobaoption[key] for key in ["epsilon", "complement", "rmw_layer"]]
     params = copy.deepcopy(model.params)
-    batch_x = model.layers["toba"].forward(x,params)
+    if 1 in rmw_layer: batch_x = model.layers["toba"].forward(x,params)
+    else: batch_x = x
     for idx in range(1,max(rmw_layer)+1):
         if idx not in rmw_layer:
             batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
@@ -63,8 +64,7 @@ def rmw(model,x,tobaoption):
         if idx == max(rmw_layer) : break
         batch_x = np.delete(batch_x,rmlist,axis=1)
         batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
-        batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params) 
-                      
+        batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params)                  
     return params
 
 
