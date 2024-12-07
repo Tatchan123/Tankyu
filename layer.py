@@ -9,6 +9,25 @@ from data.load import load_mnist
 import copy
 from trainer import *
 
+
+class Dropout:
+    def __init__(self, rate):
+        self.rate = rate
+        self.mask = None
+
+    def forward(self,x,params,training=True):
+        if training:
+            self.mask = np.random.rand(*x.shape) > self.rate
+            return x * self.mask
+        else:
+            return x * (1.0 - self.rate)
+
+    def backward(self, dout, params):
+        return dout * self.mask
+    
+    
+    
+    
 class Relu:                   
     def __init__ (self):
         self.mask = None
@@ -120,7 +139,7 @@ class BatchNormalize:
         self.momentum = 0.9
 
     def forward(self,x,params,training=False):
-        if training:
+        if training:#if training
             B,C,h,w = x.shape
             x = np.transpose(x,(1,0,2,3)).reshape(C,B*h*w)
             mu = np.mean(x,axis=1)
@@ -134,11 +153,11 @@ class BatchNormalize:
             out = np.transpose(out.reshape(C,B,h,w),(1,0,2,3))
             
             if np.all(params["move_m"+str(self.idx)]==0):
-                params["move_m"] = mu
-                params["move_v"] = self.var
+                params["move_m"+str(self.idx)] = mu
+                params["move_v"+str(self.idx)] = self.var
             else:
-                params["move_m"] = self.momentum * params["move_m"] + (1-self.momentum)*mu
-                params["move_v"] = self.momentum * params["move_v"] + (1-self.momentum)*self.var
+                params["move_m"+str(self.idx)] = self.momentum * params["move_m"+str(self.idx)] + (1-self.momentum)*mu
+                params["move_v"+str(self.idx)] = self.momentum * params["move_v"+str(self.idx)] + (1-self.momentum)*self.var
 
         else: #なんか移動平均がうまく動かん
             B,C,h,w = x.shape
@@ -264,9 +283,7 @@ class Affine: #3
         return dx
 
 
-"""
-以下大事故
-"""
+
 class SoftmaxLoss:
     def __init__(self):
         self.loss = None

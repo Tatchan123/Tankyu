@@ -15,7 +15,7 @@ from layer import *
 
 class Convnetwork:
 
-    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation="Relu",batchnorm=True, toba=False):
+    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation="Relu",batchnorm=True, toba=False, drop_rate=0):
         self.input_size = input_size
         self.output_size = output_size
         self.dense_layer = dense_layer
@@ -40,8 +40,6 @@ class Convnetwork:
             
             if len(self.conv_layer[idx-1]) == 3:
                 
-                print(idx)
-                
                 self.layers["Conv2d"+str(cc)] = Conv2d(cc,conv_layer[idx-1][2])
                 if self.batchnorm:
                     self.layers["BatchNorm"+str(cc)] = BatchNormalize(cc)
@@ -60,50 +58,13 @@ class Convnetwork:
 
         for idx in range(1, self.layer_n+1):
             self.layers["Affine"+str(idx)] = Affine(idx)
+            if drop_rate != 0:
+                self.layers["Dropout"+str(idx)] = Dropout(drop_rate)
             self.layers["Activation"+str(idx)] = self.activation()
         
         idx = self.layer_n + 1        #最終層は上の層と同じくaffine,biasは持つが、reluではなく祖父とマックスなので別で
         self.layers["Affine"+str(idx)] = Affine(idx)
         self.last_layer = SoftmaxLoss()
-        
-        
-        print(self.layers)
-        
-        
-        
-        
-        # for idx in range(1, len(self.conv_layer)+1):
-            
-        #     if len(self.conv_layer[idx-1]) == 3:
-        #         self.layers["Conv2d"+str(cc)] = Conv2d(cc,conv_layer[idx-1][2])
-        #         if self.batchnorm:
-        #             self.layers["BatchNorm"+str(cc)] = BatchNormalize(cc)
-        #         self.layers["ConvActivation"+str(idx)] = self.activation()
-        #         self.paddings.append(conv_layer[idx-1][2])
-        #         cc += 1
-        #     elif len(self.conv_layer[idx-1]) == 1:    
-        #         self.layers["Maxpool"+str(pc)] = Maxpool(pc,conv_layer[idx-1][0])
-        #         pc += 1
-
-
-        # self.layers["Flatten"] = Flatten()
-        # if toba:
-        #     self.layers["Toba"] = Toba()
-
-
-        # for idx in range(1, self.layer_n+1):
-        #     self.layers["Affine"+str(idx)] = Affine(idx)
-        #     self.layers["Activation"+str(idx)] = self.activation()
-        
-        # idx = self.layer_n + 1        #最終層は上の層と同じくaffine,biasは持つが、reluではなく祖父とマックスなので別で
-        # self.layers["Affine"+str(idx)] = Affine(idx)
-        # self.last_layer = SoftmaxLoss()
-        
-    
-    
-    
-    
-    
     
     
     def gradient(self,x,t,params):
@@ -113,7 +74,7 @@ class Convnetwork:
         x:入力データ t:正解ラベル
         """
         #順伝播
-        self.predict(x,t) #損失関数自体はいらないので返り血はうけとらない  各層通過時にレイヤのインスタンスにアクティベーションと重みが保存されるのでそれでok
+        self.predict(x,t,True) #損失関数自体はいらないので返り血はうけとらない  各層通過時にレイヤのインスタンスにアクティベーションと重みが保存されるのでそれでok
         #逆伝播
         self.backward()
             
@@ -141,7 +102,7 @@ class Convnetwork:
         
         return grads
         
-    def predict(self,x,t,training=True):
+    def predict(self,x,t,training):
         for layer in self.layers.values():
             
             x = layer.forward(x,self.params,training)
@@ -164,7 +125,7 @@ class Convnetwork:
 
 
     def accuracy(self,x,t):
-        y = self.predict(x,t,training=True)
+        y = self.predict(x,t,training=False)
 
         y = np.argmax(y,axis=1)
         if t.ndim != 1 :  t = np.argmax(t, axis=1)     #大発見 こんな書き方できるのか
