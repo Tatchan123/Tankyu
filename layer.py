@@ -139,18 +139,18 @@ class BatchNormalize:
         self.momentum = 0.9
 
     def forward(self,x,params,training=False):
-        if training:#if training
+        if training:
             B,C,h,w = x.shape
-            x = np.transpose(x,(1,0,2,3)).reshape(C,B*h*w)
-            mu = np.mean(x,axis=1)
-            self.xm = x - mu.reshape(C,1)
-            self.var = np.var(x,axis=1)
-            # ブロードキャストするために縦向きに変換(gamma,beta, mu,varとその移動平均)
-            self.xbn = self.xm / np.sqrt((self.var + 1e-7).reshape(C,1))
+            x = np.transpose(x,(0,2,3,1)).reshape(B*h*w,C)
+            mu = np.mean(x,axis=0)
+            self.xm = x - mu
+            self.var = np.var(x,axis=0)
+            
+            self.xbn = self.xm / np.sqrt(self.var + 1e-7)
             gamma = params["gamma"+str(self.idx)]
             beta = params["beta"+str(self.idx)]
-            out = gamma.reshape(C,1) * self.xbn + beta.reshape(C,1)
-            out = np.transpose(out.reshape(C,B,h,w),(1,0,2,3))
+            out = gamma * self.xbn + beta
+            out = np.transpose(out.reshape(B,h,w,C),(0,3,1,2))
             
             if np.all(params["move_m"+str(self.idx)]==0):
                 params["move_m"+str(self.idx)] = mu
@@ -159,30 +159,30 @@ class BatchNormalize:
                 params["move_m"+str(self.idx)] = self.momentum * params["move_m"+str(self.idx)] + (1-self.momentum)*mu
                 params["move_v"+str(self.idx)] = self.momentum * params["move_v"+str(self.idx)] + (1-self.momentum)*self.var
 
-        else: #なんか移動平均がうまく動かん
+        else: 
             B,C,h,w = x.shape
-            x = np.transpose(x,(1,0,2,3)).reshape(C,B*h*w)
-            xbn = (x - params["move_m"+str(self.idx)].reshape(C,1)) / np.sqrt((params["move_v"+str(self.idx)] + 1e-7).reshape(C,1))
+            x = np.transpose(x,(0,2,3,1)).reshape(B*h*w,C)
+            xbn = (x - params["move_m"+str(self.idx)]) / np.sqrt(params["move_v"+str(self.idx)] + 1e-7)
             gamma = params["gamma"+str(self.idx)]
             beta = params["beta"+str(self.idx)]
-            out = gamma.reshape(C,1) * xbn + beta.reshape(C,1)
-            out = np.transpose(out.reshape(C,B,h,w),(1,0,2,3))
+            out = gamma * xbn + beta
+            out = np.transpose(out.reshape(B,h,w,C),(0,3,1,2))
 
         return out
     
     def backward(self,dout,params):
         B,C,h,w = dout.shape
-        dout = np.transpose(dout,(1,0,2,3)).reshape(C,B*h*w)
-        self.db = np.sum(dout, axis=1)
-        self.dg = np.sum(dout*self.xbn,axis=1)
+        dout = np.transpose(dout,(0,2,3,1)).reshape(B*h*w,C)
+        self.db = np.sum(dout, axis=0)
+        self.dg = np.sum(dout*self.xbn,axis=0)
         gamma = params["gamma"+str(self.idx)]
-        dxbn = dout * gamma.reshape(C,1)
+        dxbn = dout * gamma
 
-        dvar = np.sum(dxbn * self.xm * -0.5 * ((self.var + 1e-7)**-3/2).reshape(C,1) , axis=1)
-        dxm = dxbn / np.sqrt(self.var + 1e-7).reshape(C,1) + 2 * self.xm * dvar.reshape(C,1) / (B*h*w)
+        dvar = np.sum(dxbn * self.xm * -0.5 * ((self.var + 1e-7)**-3/2) , axis=0)
+        dxm = dxbn / np.sqrt(self.var + 1e-7) + 2 * self.xm * dvar / (B*h*w)
 
-        dx = dxm - np.mean(dxm,axis=1).reshape(C,1)
-        dx = np.transpose(dx.reshape(C,B,h,w),(1,0,2,3))
+        dx = dxm - np.mean(dxm,axis=0)
+        dx = np.transpose(dx.reshape(B,h,w,C),(0,3,1,2))
         return dx
 
 

@@ -15,7 +15,7 @@ from layer import *
 
 class Convnetwork:
 
-    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation="Relu",batchnorm=True, toba=False, drop_rate=0):
+    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation="Relu",batchnorm=True, toba=False, drop_rate=[0,0]):
         self.input_size = input_size
         self.output_size = output_size
         self.dense_layer = dense_layer
@@ -43,6 +43,8 @@ class Convnetwork:
                 self.layers["Conv2d"+str(cc)] = Conv2d(cc,conv_layer[idx-1][2])
                 if self.batchnorm:
                     self.layers["BatchNorm"+str(cc)] = BatchNormalize(cc)
+                if drop_rate[0] != 0:
+                    self.layers["ConvDrop"+str(cc)] = Dropout(drop_rate[0])
                 self.layers["ConvActivation"+str(cc)] = self.activation()
                 
                 cc += 1
@@ -58,8 +60,8 @@ class Convnetwork:
 
         for idx in range(1, self.layer_n+1):
             self.layers["Affine"+str(idx)] = Affine(idx)
-            if drop_rate != 0:
-                self.layers["Dropout"+str(idx)] = Dropout(drop_rate)
+            if drop_rate[1] != 0:
+                self.layers["Dropout"+str(idx)] = Dropout(drop_rate[1])
             self.layers["Activation"+str(idx)] = self.activation()
         
         idx = self.layer_n + 1        #最終層は上の層と同じくaffine,biasは持つが、reluではなく祖父とマックスなので別で
@@ -133,7 +135,7 @@ class Convnetwork:
         return accuracy
 
     def cal_loss(self,x,t):
-        loss = self.predict(x,t,training=True)
+        loss = self.predict(x,t,training=False)
         return self.last_layer.forward(loss,t)
 
 

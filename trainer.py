@@ -133,7 +133,8 @@ class Optimizer():
                 acc = self.model.accuracy(x_test,t_test)
                 loss = self.model.cal_loss(x_test,t_test)
                 print("epoch:",str(i)," |  accuracy:"+str(acc),"loss:"+str(loss))
-                print("accuracy:"+str(self.model.accuracy(x_batch,t_batch)),"loss:"+str(self.model.cal_loss(x_batch,t_batch)))
+                print("traindata  |  accuracy:"+str(self.model.accuracy(x_batch,t_batch)),"loss:"+str(self.model.cal_loss(x_batch,t_batch)))
+                print("---------------------------------------------------------------")
 
         
 class Scheduler():
