@@ -23,7 +23,7 @@ opt2 = {"opt":"adam", "dec1":0.9, "dec2":0.999,"lr":0.002,"batch_size":64}
 exp = {"method":"exp", "base":0.97}
 
 
-network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True,drop_rate=[0.3,0.5])
+network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, drop_rate=[0.2,0.45], regularize=["l2",0.0015])
 test = Trainer(network, step=[150], optimizer=opt2, data=data, check=1, scheduler=exp)
 test.fit()
 

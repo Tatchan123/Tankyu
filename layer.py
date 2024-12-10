@@ -285,15 +285,37 @@ class Affine: #3
 
 
 class SoftmaxLoss:
-    def __init__(self):
+    def __init__(self,regularize):
         self.loss = None
         self.y = None # softmaxの出力
         self.t = None # 教師データ
+        self.regularize = regularize
+        
 
-    def forward(self, x, t):
+    def forward(self, x, t, params):
         self.t = t
         self.y = self.softmax(x)
-        self.loss = self.cross_entropy_error(self.y, self.t)
+        if self.regularize is None:
+            self.loss = self.cross_entropy_error(self.y, self.t)
+
+        elif self.regularize[0] == "l1": #L1正則化
+            regular_term = 0
+            for key,prm in params.items():
+                if "move" in key:
+
+                    continue
+                else:
+                    regular_term = np.sum(np.abs(prm))
+            self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
+
+        elif self.regularize[0] == "l2": #L2正則化
+            regular_term = 0
+            for key,prm in params.items():
+                if "move" in key:
+                    continue
+                else:
+                    regular_term += np.sum(prm ** 2)
+            self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
         
         return self.loss
 

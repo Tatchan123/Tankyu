@@ -26,7 +26,7 @@ class Trainer:
         
     def fit(self):
         print("start")
-        
+        result = None
         for step in self.step:
             if type(step) == int:
                 self.optimizer.fit(self.data,self.batch_size,step,self.check)
@@ -36,7 +36,7 @@ class Trainer:
                 params,result = self.toba_w(tobafunc,tobaname)
                 
         
-        print("finitsh")
+        print("finish")
         return result
 
 
