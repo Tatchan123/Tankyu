@@ -243,7 +243,7 @@ class Maxpool:
 
         # for row,line in enumerate(self.max_index):
         #     dcol[row][line] = dout[row]
-        # お前の200万ループをずっと見ていたぞ 本当によく頑張ったな 安らかに眠れ
+        # お前の200万ループをずっと見ていたぞ 本当によく頑張ったな
         dcol[np.arange(B*C*Oh*Ow),self.max_index] = dout
         
         im  = self.col2im(dcol,B,C,Oh,Ow,self.Fh,self.Fw)
