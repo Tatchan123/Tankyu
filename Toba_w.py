@@ -230,10 +230,11 @@ def auto_epsilon_rmw(model,x,tobaoption):
     
     
 def corrcoref_rmw(model,x,tobaoption):
-    epsilon, complement, rmw_layer = [tobaoption[key] for key in ["epsilon", "complement", "rmw_layer"]]
+    epsilon, complement, rmw_layer, delete_n = [tobaoption[key] for key in ["epsilon", "complement", "rmw_layer","delete_n"]]
     params = copy.deepcopy(model.params)
-    batch_x = model.layers["toba"].forward(x,params)
-    for idx in range(1,max(rmw_layer)+1):
+    if 1 in rmw_layer: batch_x = model.layers["toba"].forward(x,params) #TODO昆布に対応
+    else: batch_x = x
+    for idx in range(1,max(rmw_layer)+1):  
         if idx not in rmw_layer:
             batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
             batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params)
@@ -241,17 +242,22 @@ def corrcoref_rmw(model,x,tobaoption):
         
         rmlist = []
         complist = []
+        corlist = []
         alist = []
         blist = []
+        
+        rmlist_s = []
+        complist_s = []
+        alist_s = []
+        blist_s = []
+        
         out = []
-        for i in batch_x:
+        for i in batch_x:            #ループなしにしたい
             y = (i.reshape(-1,1))*params["W"+str(idx)]
             out.append(y)
         out=np.asarray(out)
         out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #x_batch_y
         for i in range(0,len(out)-1):
-            if i in complist:
-                continue
             for j in range(i+1,len(out)):
                 i_val = out[i]
                 j_val = out[j]
@@ -259,40 +265,50 @@ def corrcoref_rmw(model,x,tobaoption):
                 vari = (np.average(i_val**2)) - (np.average(i_val))**2
                 varj = (np.average(j_val**2)) - (np.average(j_val))**2
                 cor = sxy / (np.sqrt(vari)*np.sqrt(varj) + 0.00000001) #1e-10みたいな表記だとうまくいかないなぜ
-                #print(sxy,vari,varj)
-                #print("    ",cor)
-                if np.isnan(cor): print(sxy,vari,varj,cor)
-                if abs(cor) >= epsilon[idx-1]:
-                    rmlist.append(i)
-                    complist.append(j)                 # i=x , j=yとしてy=ax+bに近似
-                    a = sxy/vari
-                    b = np.average(j_val) - a*np.average(i_val)
-                    alist.append(a)
-                    blist.append(b)
-                    break
+                a = sxy/vari
+                b = np.average(j_val) - a*np.average(i_val)
                 
-        blist = np.array(blist)
-        alist = np.array(alist)
+                corlist.append(abs(cor))
+                rmlist.append(i)
+                complist.append(j)
+                alist.append(a)
+                blist.append(b)                
+        
+        ziplist = zip(corlist,rmlist,complist,alist,blist)
+        zipsort = sorted(ziplist,reverse=True)
+        corlist,rmlist,complist,alist,blist = zip(*zipsort)
+        cnt = 1
+        while len(rmlist_s)<delete_n[idx-1]:
+            if (rmlist[cnt] not in rmlist_s) and (rmlist[cnt] not in complist_s):
+                rmlist_s.append(rmlist[cnt])
+                complist_s.append(complist[cnt])
+                alist_s.append(alist[cnt])
+                blist_s.append(blist[cnt])
+                print(corlist[cnt])
+            cnt += 1
+                
+        blist_s = np.array(blist_s)
+        alist_s = np.array(alist_s)
         if complement:
             scalar = np.ones(len(params["W"+str(idx)]))
-            for n in range(len(rmlist)):
-                scalar[int(complist[n])] += alist[n]
+            for n in range(len(rmlist_s)):
+                scalar[int(complist_s[n])] += alist_s[n]
             params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
-            params["b"+str(idx)] = params["b"+str(idx)] + np.sum(blist)
+            params["b"+str(idx)] = params["b"+str(idx)] + np.sum(blist_s)
             # params["b"+str(idx)] += np.sum(difflist,axis=0)
             
         if idx == 1:
-            params["init_remove"].append(rmlist)
-            params["W1"] = np.delete(params["W1"],rmlist,axis=0)
+            params["init_remove"].append(rmlist_s)
+            params["W1"] = np.delete(params["W1"],rmlist_s,axis=0)
         else:
-            params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],rmlist,axis=1)
-            params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist)
-            params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist,axis=0)
+            params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],rmlist_s,axis=1)
+            params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist_s)
+            params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist_s,axis=0)
             
-        print("    layer"+str(idx),": delete",str(len(rmlist))+"nodes")
+        print("    layer"+str(idx),": delete",str(len(rmlist_s))+"nodes")
 
         if idx == max(rmw_layer) : break
-        batch_x = np.delete(batch_x,rmlist,axis=1)
+        batch_x = np.delete(batch_x,rmlist_s,axis=1)
         batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
         batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params) 
     return params

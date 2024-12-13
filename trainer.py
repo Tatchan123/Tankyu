@@ -48,7 +48,7 @@ class Trainer:
         params = toba_type(self.model,self.x_train,self.tobaoption)
         self.model.updateparams(params)
         
-        tmp = [self.model.params["W1"].shape[0]]
+        tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.model.dense_layer)+2)):
             tmp = np.append(tmp,self.model.params["b"+str(i)].shape)
         print("    Composition of Network :",tmp)
