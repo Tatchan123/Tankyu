@@ -102,7 +102,8 @@ class Conv2d:
         self.Ishape = x.shape
         col = self.im2col(x,B,C,Fh,Fw,Oh,Ow)
         # col = np.asarray(col)
-        self.col = col
+        if training:
+            self.col = col
         w = params["F"+str(self.idx)].reshape(M,-1)
         b = params["Cb"+str(self.idx)]
         out = np.dot(w,col).reshape(M,B,Oh,Ow)
@@ -231,7 +232,8 @@ class Maxpool:
         self.Ishape = x.shape
         col = self.im2col(x,B,C,self.Fh,self.Fw,Oh,Ow)
         out = np.max(col,axis=1).reshape(B,Oh,Ow,C).transpose(0,3,1,2)
-        self.max_index = np.argmax(col,axis=1)
+        if training:
+            self.max_index = np.argmax(col,axis=1)
         
         return out
     
@@ -243,7 +245,7 @@ class Maxpool:
 
         # for row,line in enumerate(self.max_index):
         #     dcol[row][line] = dout[row]
-        # お前の200万ループをずっと見ていたぞ 本当によく頑張ったな 安らかに眠れ
+        # お前の200万ループをずっと見ていたぞ 本当によく頑張ったな
         dcol[np.arange(B*C*Oh*Ow),self.max_index] = dout
         
         im  = self.col2im(dcol,B,C,Oh,Ow,self.Fh,self.Fw)
@@ -269,7 +271,8 @@ class Affine: #3
         self.db = None
         
     def forward(self,x,params,training=False):
-        self.x = x
+        if training:
+            self.x = x
         w = params["W"+str(self.idx)]
         b = params["b"+str(self.idx)]
         out = np.dot(x,w) + b
@@ -285,15 +288,37 @@ class Affine: #3
 
 
 class SoftmaxLoss:
-    def __init__(self):
+    def __init__(self,regularize):
         self.loss = None
         self.y = None # softmaxの出力
         self.t = None # 教師データ
+        self.regularize = regularize
+        
 
-    def forward(self, x, t):
+    def forward(self, x, t, params):
         self.t = t
         self.y = self.softmax(x)
-        self.loss = self.cross_entropy_error(self.y, self.t)
+        if self.regularize is None:
+            self.loss = self.cross_entropy_error(self.y, self.t)
+
+        elif self.regularize[0] == "l1": #L1正則化
+            regular_term = 0
+            for key,prm in params.items():
+                if "move" in key:
+
+                    continue
+                else:
+                    regular_term = np.sum(np.abs(prm))
+            self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
+
+        elif self.regularize[0] == "l2": #L2正則化
+            regular_term = 0
+            for key,prm in params.items():
+                if "move" in key:
+                    continue
+                else:
+                    regular_term += np.sum(prm ** 2)
+            self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
         
         return self.loss
 

@@ -15,14 +15,14 @@ from layer import *
 
 class Convnetwork:
 
-    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation=Relu,batchnorm=True, toba=False, drop_rate=[0,0]):
+    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation=Relu,batchnorm=True, toba=False, drop_rate=[0,0], regularize=None):
         self.input_size = input_size
         self.output_size = output_size
         self.dense_layer = dense_layer
         self.conv_layer = conv_layer
         self.layer_n = len(self.dense_layer)
         self.batchnorm = batchnorm
-        self.paddings = []
+        self.regularize = regularize
         
         #try:
         wi = weightinit()
@@ -66,7 +66,7 @@ class Convnetwork:
         
         idx = self.layer_n + 1        #最終層は上の層と同じくaffine,biasは持つが、reluではなく祖父とマックスなので別で
         self.layers["Affine"+str(idx)] = Affine(idx)
-        self.last_layer = SoftmaxLoss()
+        self.last_layer = SoftmaxLoss(regularize)
     
     
     def gradient(self,x,t,params):
@@ -82,25 +82,55 @@ class Convnetwork:
             
         grads = {}
         cc = 1   #番号を畳み込み、プーリング、全結合で別々に振ってるのでfor i すると番号が被る
-        pc = 1
         ac = 1
-        for layer_name in self.layers.keys():
-            if layer_name == "Conv2d"+str(cc):
-                grads["F"+str(cc)] = self.layers[layer_name].dW
-                grads["Cb"+str(cc)] = self.layers[layer_name].db
-                if self.batchnorm:
-                    grads["gamma"+str(cc)] = self.layers["BatchNorm"+str(cc)].dg
-                    grads["beta"+str(cc)] = self.layers["BatchNorm"+str(cc)].db
-                cc += 1
-            
+        if self.regularize is None:
+            for layer_name in self.layers.keys():
+                if layer_name == "Conv2d"+str(cc):
+                    grads["F"+str(cc)] = self.layers[layer_name].dW
+                    grads["Cb"+str(cc)] = self.layers[layer_name].db
+                    if self.batchnorm:
+                        grads["gamma"+str(cc)] = self.layers["BatchNorm"+str(cc)].dg
+                        grads["beta"+str(cc)] = self.layers["BatchNorm"+str(cc)].db
+                    cc += 1
+                
+                elif layer_name == "Affine"+str(ac):
+                    grads["W"+str(ac)] = self.layers["Affine"+str(ac)].dW
+                    grads["b"+str(ac)] = self.layers["Affine"+str(ac)].db
+                    ac += 1
 
-            elif layer_name == "Maxpool"+str(pc):
-                #最大プーリング層はパラメーターを持たない
-                pc += 1
-            elif layer_name == "Affine"+str(ac):
-                grads["W"+str(ac)] = self.layers["Affine"+str(ac)].dW
-                grads["b"+str(ac)] = self.layers["Affine"+str(ac)].db
-                ac += 1
+        elif self.regularize[0] == "l1":
+            alpha = self.regularize[1]
+            for layer_name in self.layers.keys():
+                if layer_name == "Conv2d"+str(cc):
+                    grads["F"+str(cc)] = self.layers[layer_name].dW + alpha * np.where(params["F"+str(cc)] < 0,-1,np.where(params["F"+str(cc)] > 0,1,0))
+                    #パラメータの値が負ならば-1,正ならば1,ゼロならば0を出す
+                    grads["Cb"+str(cc)] = self.layers[layer_name].db + alpha * np.where(params["Cb"+str(cc)] < 0,-1,np.where(params["Cb"+str(cc)] > 0,1,0))
+                    if self.batchnorm:
+                        grads["gamma"+str(cc)] = self.layers["BatchNorm"+str(cc)].dg + alpha * np.where(params["gamma"+str(cc)] < 0,-1,np.where(params["gamma"+str(cc)] > 0,1,0))
+                        grads["beta"+str(cc)] = self.layers["BatchNorm"+str(cc)].db + alpha * np.where(params["beta"+str(cc)] < 0,-1,np.where(params["beta"+str(cc)] > 0,1,0))
+                    cc += 1
+                
+                
+                elif layer_name == "Affine"+str(ac):
+                    grads["W"+str(ac)] = self.layers["Affine"+str(ac)].dW + alpha * np.where(params["W"+str(cc)] < 0,-1,np.where(params["W"+str(ac)] > 0,1,0))
+                    grads["b"+str(ac)] = self.layers["Affine"+str(ac)].db + alpha * np.where(params["b"+str(cc)] < 0,-1,np.where(params["b"+str(ac)] > 0,1,0))
+                    ac += 1
+        
+        elif self.regularize[0] == "l2":
+            alpha = self.regularize[1]
+            for layer_name in self.layers.keys():
+                if layer_name == "Conv2d"+str(cc):
+                    grads["F"+str(cc)] = self.layers[layer_name].dW + 2 * alpha * params["F"+str(cc)]
+                    grads["Cb"+str(cc)] = self.layers[layer_name].db + 2 * alpha * params["Cb"+str(cc)]
+                    if self.batchnorm:
+                        grads["gamma"+str(cc)] = self.layers["BatchNorm"+str(cc)].dg + 2 * alpha * params["gamma"+str(cc)]
+                        grads["beta"+str(cc)] = self.layers["BatchNorm"+str(cc)].db + 2 * alpha * params["beta"+str(cc)]
+                    cc += 1
+                
+                elif layer_name == "Affine"+str(ac):
+                    grads["W"+str(ac)] = self.layers["Affine"+str(ac)].dW + 2 * alpha * params["W"+str(ac)]
+                    grads["b"+str(ac)] = self.layers["Affine"+str(ac)].db + 2 * alpha * params["b"+str(ac)]
+                    ac += 1
         
         return grads
         
@@ -110,7 +140,7 @@ class Convnetwork:
             x = layer.forward(x,self.params,training)
             # print(layer)
             # print(x.shape)
-        y = self.last_layer.forward(x,t) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
+        y = self.last_layer.forward(x,t,self.params) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
         return(x)
     
     
@@ -136,7 +166,7 @@ class Convnetwork:
 
     def cal_loss(self,x,t):
         loss = self.predict(x,t,training=False)
-        return self.last_layer.forward(loss,t)
+        return self.last_layer.forward(loss,t,self.params)
 
 
     def updateparams(self,params):

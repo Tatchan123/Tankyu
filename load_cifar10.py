@@ -33,8 +33,6 @@ def load_cifar10(normalize=False,means=None,stds=None):
     t_test = change_one_hot_lebel(t_test)
     
 
-    x_train = {}
-    t_train = {}
 
     for idx in range(1,6):
         fname = os.path.join("./data_cifar10/data_batch_"+str(idx))
@@ -53,13 +51,13 @@ def load_cifar10(normalize=False,means=None,stds=None):
     if normalize:
         means = np.asarray(means)
         stds = np.asarray(stds)
-        x = np.transpose(x_train,(1,0,2,3)).reshape(3,-1)
-        mu = np.mean(x,axis=1)
-        sigma = np.var(x,axis=1)
-        x_train = (x - mu.reshape(3,1)) / np.sqrt(sigma + 1e-9).reshape(3,1) * stds.reshape(3,1) + means.reshape(3,1)
-        x_test = (np.transpose(x_test,(1,0,2,3)).reshape(3,-1) - mu.reshape(3,1)) / np.sqrt(sigma + 1e-9).reshape(3,1) * stds.reshape(3,1) + means.reshape(3,1)
-        x_train = x_train.reshape(3,50000,32,32).transpose(1,0,2,3)
-        x_test = x_test.reshape(3,10000,32,32).transpose(1,0,2,3)
+        x = np.transpose(x_train,(0,2,3,1)).reshape(-1,3)
+        mu = np.mean(x,axis=0)
+        sigma = np.var(x,axis=0)
+        x_train = (x - mu) / np.sqrt(sigma + 1e-9) * stds + means
+        x_test = (np.transpose(x_test,(0,2,3,1)).reshape(-1,3) - mu) / np.sqrt(sigma + 1e-9) * stds + means
+        x_train = x_train.reshape(50000,32,32,3).transpose(0,2,3,1)
+        x_test = x_test.reshape(10000,32,32,3).transpose(0,2,3,1)
 
     t_test = t_test.astype(int)
     t_train = t_train.astype(int)
