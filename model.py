@@ -15,7 +15,7 @@ from layer import *
 
 class Convnetwork:
 
-    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation="Relu",batchnorm=True, toba=False, drop_rate=[0,0], regularize=None):
+    def __init__ (self, input_size, output_size, dense_layer, weightinit, conv_layer=[],activation=Relu,batchnorm=True, toba=False, drop_rate=[0,0], regularize=None):
         self.input_size = input_size
         self.output_size = output_size
         self.dense_layer = dense_layer

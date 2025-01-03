@@ -102,7 +102,8 @@ class Conv2d:
         self.Ishape = x.shape
         col = self.im2col(x,B,C,Fh,Fw,Oh,Ow)
         # col = np.asarray(col)
-        self.col = col
+        if training:
+            self.col = col
         w = params["F"+str(self.idx)].reshape(M,-1)
         b = params["Cb"+str(self.idx)]
         out = np.dot(w,col).reshape(M,B,Oh,Ow)
@@ -231,7 +232,8 @@ class Maxpool:
         self.Ishape = x.shape
         col = self.im2col(x,B,C,self.Fh,self.Fw,Oh,Ow)
         out = np.max(col,axis=1).reshape(B,Oh,Ow,C).transpose(0,3,1,2)
-        self.max_index = np.argmax(col,axis=1)
+        if training:
+            self.max_index = np.argmax(col,axis=1)
         
         return out
     
@@ -269,7 +271,8 @@ class Affine: #3
         self.db = None
         
     def forward(self,x,params,training=False):
-        self.x = x
+        if training:
+            self.x = x
         w = params["W"+str(self.idx)]
         b = params["b"+str(self.idx)]
         out = np.dot(x,w) + b
