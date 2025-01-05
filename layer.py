@@ -15,7 +15,7 @@ class Dropout:
         self.rate = rate
         self.mask = None
 
-    def forward(self,x,params,training=True):
+    def forward(self,x,params,training=False):
         if training:
             self.mask = np.random.rand(*x.shape) > self.rate
             return x * self.mask
@@ -32,7 +32,7 @@ class Relu:
     def __init__ (self):
         self.mask = None
     
-    def forward(self,x,params,training=True):
+    def forward(self,x,params,training=False):
         self.mask = (x < 0)
         return np.maximum(0,x)
     

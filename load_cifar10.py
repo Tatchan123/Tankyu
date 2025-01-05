@@ -56,8 +56,8 @@ def load_cifar10(normalize=False,means=None,stds=None):
         sigma = np.var(x,axis=0)
         x_train = (x - mu) / np.sqrt(sigma + 1e-9) * stds + means
         x_test = (np.transpose(x_test,(0,2,3,1)).reshape(-1,3) - mu) / np.sqrt(sigma + 1e-9) * stds + means
-        x_train = x_train.reshape(50000,32,32,3).transpose(0,2,3,1)
-        x_test = x_test.reshape(10000,32,32,3).transpose(0,2,3,1)
+        x_train = x_train.reshape(50000,32,32,3).transpose(0,3,1,2)
+        x_test = x_test.reshape(10000,32,32,3).transpose(0,3,1,2)
 
     t_test = t_test.astype(int)
     t_train = t_train.astype(int)

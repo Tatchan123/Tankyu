@@ -44,8 +44,7 @@ class Trainer:
         print("start Toba_W :",toba_name,"------------------------------------------")
         acc1 = self.model.accuracy(self.x_test,self.t_test)
         print("    accuracy before Toba_W :", str(acc1))
-        
-        params = toba_type(self.model,self.x_train,self.tobaoption)
+        params = toba_type(self.model,self.x_test,self.tobaoption)
         self.model.updateparams(params)
         
         tmp = [params["W1"].shape[0]]
@@ -132,7 +131,7 @@ class Optimizer():
             if (i+1) % check ==0:
                 acc = self.model.accuracy(x_test,t_test)
                 loss = self.model.cal_loss(x_test,t_test)
-                print("epoch:",str(i)," |  accuracy:"+str(acc),"loss:"+str(loss))
+                print("epoch:",str(i+1)," |  accuracy:"+str(acc),"loss:"+str(loss))
                 print("traindata  |  accuracy:"+str(self.model.accuracy(x_batch,t_batch)),"loss:"+str(self.model.cal_loss(x_batch,t_batch)))
                 print("---------------------------------------------------------------")
 

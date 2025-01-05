@@ -164,7 +164,7 @@ def count_rmw(model,x,tobaoption):
 def auto_epsilon_rmw(model,x,tobaoption):
     complement, rmw_layer = [tobaoption[key] for key in ["complement", "rmw_layer"]]
     params = model.params
-    batch_x = model.layers["toba"].forward(x,params)
+    batch_x = model.layers["Toba"].forward(x,params)
     for idx in range(1,max(rmw_layer)+1):
         if idx not in rmw_layer:
             batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
@@ -232,7 +232,7 @@ def auto_epsilon_rmw(model,x,tobaoption):
 def corrcoref_rmw(model,x,tobaoption):
     epsilon, complement, rmw_layer, delete_n = [tobaoption[key] for key in ["epsilon", "complement", "rmw_layer","delete_n"]]
     params = copy.deepcopy(model.params)
-    if 1 in rmw_layer: batch_x = model.layers["toba"].forward(x,params) #TODO昆布に対応
+    if 1 in rmw_layer: batch_x = model.layers["Toba"].forward(x,params) #TODO昆布に対応
     else: batch_x = x
     for idx in range(1,max(rmw_layer)+1):  
         if idx not in rmw_layer:
@@ -312,3 +312,215 @@ def corrcoref_rmw(model,x,tobaoption):
         batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
         batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params) 
     return params
+
+
+
+def conv_corrcoef_toba(model,x,tobaoption):
+    epsilon, complement, rmw_layer, delete_n = [tobaoption[key] for key in ["epsilon", "complement", "rmw_layer","delete_n"]]
+    params = copy.deepcopy(model.params)
+    batch_x = x
+    conv_index = 1
+    pc = 1
+    rmw_index = 0
+    print(batch_x.shape)
+    while type(rmw_layer[rmw_index]) == str and "c" in rmw_layer[rmw_index]:
+        if not "c"+str(conv_index) in rmw_layer:
+            batch_x = model.layers["Conv2d"+str(conv_index)].forward(batch_x,params)
+            
+            try: batch_x = model.layers["BatchNorm"+str(conv_index)].forward(batch_x,params)
+            except: pass
+            
+            try: batch_x = model.layers["ConvDrop"+str(conv_index)].forward(batch_x,params)
+            except: pass
+
+            batch_x = model.layers["ConvActivation"+str(conv_index)].forward(batch_x,params)
+            conv_index += 1
+            try:
+                batch_x = model.layers["Maxpool"+str(pc)].forward(batch_x,params)
+                pc += 1
+            except:
+                pass
+            print(batch_x.shape)
+            continue
+
+        layer = model.layers["Conv2d"+str(conv_index)]
+        pad = layer.P
+        B,C,Ih,Iw = batch_x.shape
+        F = params["F"+str(conv_index)]
+        M,C,Fh,Fw = F.shape
+        Oh = Ih + 2*pad -Fh + 1
+        Ow = Iw + 2*pad -Fw + 1
+        x = np.pad(batch_x,((0,0),(0,0),(pad,pad),(pad,pad)),'constant')
+        col = layer.im2col(x,B,C,Fh,Fw,Oh,Ow)
+        col = col.reshape(C,Fh*Fw,B*Oh*Ow)
+        F = np.transpose(F,(1,0,2,3)).reshape(C,M,-1)
+        out = []
+        for channel in range(C):
+            y = np.dot(F[channel],col[channel]).reshape(-1)
+            out.append(y)
+        print("out calclated")
+        rmlist = []
+        complist = []
+        corlist = []
+        alist = []
+        blist = []
+        
+        rmlist_s = []
+        complist_s = []
+        alist_s = []
+        blist_s = []
+    
+        for i in range(0,len(out)-1):
+            print(i)
+            for j in range(i+1,len(out)):
+                i_val = out[i]
+                j_val = out[j]
+                sxy = np.average(i_val*j_val) - np.average(i_val)*np.average(j_val)
+                vari = (np.average(i_val**2)) - (np.average(i_val))**2
+                varj = (np.average(j_val**2)) - (np.average(j_val))**2
+                cor = sxy / (np.sqrt(vari)*np.sqrt(varj) + 0.00000001) #1e-10みたいな表記だとうまくいかないなぜ
+                a = sxy/vari
+                b = np.average(j_val) - a*np.average(i_val)
+                
+                corlist.append(abs(cor))
+                rmlist.append(i)
+                complist.append(j)
+                alist.append(a)
+                blist.append(b)                
+        print("all pairs tested")
+        ziplist = zip(corlist,rmlist,complist,alist,blist)
+        zipsort = sorted(ziplist,reverse=True)
+        corlist,rmlist,complist,alist,blist = zip(*zipsort)
+        cnt = 0
+        while len(rmlist_s)<delete_n[conv_index-1]:
+            if (rmlist[cnt] not in rmlist_s) and (rmlist[cnt] not in complist_s) and (corlist[cnt] > epsilon[conv_index-1]):
+                rmlist_s.append(rmlist[cnt])
+                complist_s.append(complist[cnt])
+                alist_s.append(alist[cnt])
+                blist_s.append(blist[cnt])
+                #print(corlist[cnt])
+            cnt += 1
+            if cnt == len(rmlist):break
+                
+        blist_s = np.array(blist_s)
+        alist_s = np.array(alist_s)
+        if complement:
+            scalar = np.ones(len(params["F"+str(conv_index)]))
+            for n in range(len(rmlist_s)):
+                scalar[int(complist_s[n])] += alist_s[n]
+            params["F"+str(conv_index)] = params["F"+str(conv_index)] * (scalar.reshape(-1,1,1,1))
+            params["Cb"+str(conv_index)] = params["Cb"+str(conv_index)] + np.sum(blist_s)
+        
+        params["F"+str(conv_index-1)] = np.delete(params["F"+str(conv_index-1)],rmlist_s,axis=0)
+        params["Cb"+str(conv_index-1)] = np.delete(params["Cb"+str(conv_index-1)],rmlist_s)
+        params["F"+str(conv_index)] = np.delete(params["F"+str(conv_index)],rmlist_s,axis=1)
+
+        print("    conv_layer"+str(conv_index)," : delete",str(len(rmlist_s))+"nodes")
+
+        batch_x = model.layers["Conv2d"+str(conv_index)].forward(batch_x,params)
+
+        try: batch_x = model.layers["BatchNorm"+str(conv_index)].forward(batch_x,params)
+        except: pass
+
+        try: batch_x = model.layers["ConvDrop"+str(conv_index)].forward(batch_x,params)
+        except: pass
+
+        batch_x = model.layers["ConvActivation"+str(conv_index)].forward(batch_x,params)
+        conv_index += 1
+
+        try:
+            batch_x = model.layers["Maxpool"+str(pc)].forward(batch_x,params)
+            pc += 1
+        except:
+            pass
+
+        rmw_index += 1
+        print(batch_x.shape)
+    batch_x = model.layers["Flatten"].forward(batch_x,params)
+    try:batch_x = model.layers["Toba"].forward(batch_x,params)
+    except:pass
+
+
+
+    
+    for idx in range(1,rmw_layer[len(rmw_layer)-1]):  
+        if idx not in rmw_layer:
+            batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
+            batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params)
+            continue
+        
+        rmlist = []
+        complist = []
+        corlist = []
+        alist = []
+        blist = []
+        
+        rmlist_s = []
+        complist_s = []
+        alist_s = []
+        blist_s = []
+        
+        out = []
+        for i in batch_x:            #ループなしにしたい
+            y = (i.reshape(-1,1))*params["W"+str(idx)]
+            out.append(y)
+        out=np.asarray(out)
+        out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)  #x_batch_y
+        for i in range(0,len(out)-1):
+            for j in range(i+1,len(out)):
+                i_val = out[i]
+                j_val = out[j]
+                sxy = np.average(i_val*j_val) - np.average(i_val)*np.average(j_val)
+                vari = (np.average(i_val**2)) - (np.average(i_val))**2
+                varj = (np.average(j_val**2)) - (np.average(j_val))**2
+                cor = sxy / (np.sqrt(vari)*np.sqrt(varj) + 0.00000001) #1e-10みたいな表記だとうまくいかないなぜ
+                a = sxy/vari
+                b = np.average(j_val) - a*np.average(i_val)
+                
+                corlist.append(abs(cor))
+                rmlist.append(i)
+                complist.append(j)
+                alist.append(a)
+                blist.append(b)                
+        
+        ziplist = zip(corlist,rmlist,complist,alist,blist)
+        zipsort = sorted(ziplist,reverse=True)
+        corlist,rmlist,complist,alist,blist = zip(*zipsort)
+        cnt = 1
+        while len(rmlist_s)<delete_n[rmw_index+idx-2]:
+            if (rmlist[cnt] not in rmlist_s) and (rmlist[cnt] not in complist_s) and (corlist[cnt] > epsilon[rmw_index+idx-2]):
+                rmlist_s.append(rmlist[cnt])
+                complist_s.append(complist[cnt])
+                alist_s.append(alist[cnt])
+                blist_s.append(blist[cnt])
+                print(corlist[cnt])
+            cnt += 1
+            if cnt == len(rmlist):break
+                
+        blist_s = np.array(blist_s)
+        alist_s = np.array(alist_s)
+        if complement:
+            scalar = np.ones(len(params["W"+str(idx)]))
+            for n in range(len(rmlist_s)):
+                scalar[int(complist_s[n])] += alist_s[n]
+            params["W"+str(idx)] = params["W"+str(idx)] * (scalar.reshape(-1,1))
+            params["b"+str(idx)] = params["b"+str(idx)] + np.sum(blist_s)
+            # params["b"+str(idx)] += np.sum(difflist,axis=0)
+            
+        if idx == 1:
+            params["init_remove"].append(rmlist_s)
+            params["W1"] = np.delete(params["W1"],rmlist_s,axis=0)
+        else:
+            params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],rmlist_s,axis=1)
+            params["b"+str(idx-1)] = np.delete(params["b"+str(idx-1)],rmlist_s)
+            params["W"+str(idx)] = np.delete(params["W"+str(idx)],rmlist_s,axis=0)
+            
+        print("    layer"+str(idx),": delete",str(len(rmlist_s))+"nodes")
+
+        if idx == max(rmw_layer) : break
+        batch_x = np.delete(batch_x,rmlist_s,axis=1)
+        batch_x = model.layers["Affine"+str(idx)].forward(batch_x,params)
+        batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params) 
+    return params
+
+                
