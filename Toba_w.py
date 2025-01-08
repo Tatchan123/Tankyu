@@ -543,9 +543,9 @@ class Toba:
             rmlist, complist, scalar, bias = compare_nodes(x, idx, self.tobaoption)
             self.apply(idx,rmlist, complist, scalar, bias)
             
-    def half_predict(self, stop_layer)
+    def half_predict(self, stop_layer):
         a = self.model.predict(self.x,None,False,stop_layer)
-        if stop_layer[0] = "C":
+        if stop_layer[0] == "C":
             layer = model.layers[stop_layer]
             pad = layer.P
             B,C,Ih,Iw = batch_x.shape
@@ -572,7 +572,7 @@ class Toba:
         return out
     
     def aplly(self, layer, dellst, complst, scalar, bias):
-        if layer[0] = C:
+        if layer[0] == C:
             conv_index = layer[-1]
             self.params["F"+str(conv_index)] = self.params["F"+str(conv_index)] * (scalar.reshape(-1,1,1,1))
             self.params["Cb"+str(conv_index)] = self.params["Cb"+str(conv_index)] + bias
@@ -627,10 +627,10 @@ def corrcoef(out,layer,tobaoption):
                 
     blist_s = np.array(blist_s)
     alist_s = np.array(alist_s)
-　　　scalar = np.ones(len(params[layer]))
+    scalar = np.ones(len(params[layer]))
     for n in range(len(rmlist_s)):
         scalar[int(complist_s[n])] += alist_s[n]
     bias = np.sum(blist_s)
-return rmlist, complist , scalar, bias
+    return rmlist, complist , scalar, bias
 
         
