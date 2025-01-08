@@ -44,8 +44,9 @@ class Trainer:
         print("start Toba_W :",toba_name,"------------------------------------------")
         acc1 = self.model.accuracy(self.x_test,self.t_test)
         print("    accuracy before Toba_W :", str(acc1))
-        params = toba_type(self.model,self.x_test,self.tobaoption)
-        self.model.updateparams(params)
+        #params = toba_type(self.model,self.x_test,self.tobaoption)
+        #self.model.updateparams(params)
+        tobaclass = Toba(self.model, self.x_test, self.tobaoption)
         
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.model.dense_layer)+2)):
