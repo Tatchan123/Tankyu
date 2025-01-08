@@ -523,4 +523,47 @@ def conv_corrcoef_toba(model,x,tobaoption):
         batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params) 
     return params
 
+
+def half_predict(network,layer):
+    x=netwotk.predict(
+
+        
+class Toba:
+    def __init__ (self,model,x,tobaoption):
+        self.model = model
+        self.x = x
+        for key, value in tobaoption:
+            setattr(self, key, value)
+
+    def half_predict(self, stop_layer)
+        a = self.model.predict(self.x,None,False,stop_layer)
+        if stop_layer[1] = "C":
+            layer = model.layers[stop_layer]
+            pad = layer.P
+            B,C,Ih,Iw = batch_x.shape
+            F = params["F"+str(conv_index)]
+            M,C,Fh,Fw = F.shape
+            Oh = Ih + 2*pad -Fh + 1
+            Ow = Iw + 2*pad -Fw + 1
+            x = np.pad(batch_x,((0,0),(0,0),(pad,pad),(pad,pad)),'constant')
+            col = layer.im2col(x,B,C,Fh,Fw,Oh,Ow)
+            col = col.reshape(C,Fh*Fw,B*Oh*Ow)
+            F = np.transpose(F,(1,0,2,3)).reshape(C,M,-1)
+            out = []
+            for channel in range(C):
+                y = np.dot(F[channel],col[channel]).reshape(-1)
+                out.append(y)
+        else :
+            out = []
+            for i in batch_x:            
+                y = (i.reshape(-1,1))*params["W"+str(idx)]
+                out.append(y)
+            out=np.asarray(out)
+            out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)
+            
+        return out
+    
+    def aplly(self, layer_type, index):
+        
+            
                 
