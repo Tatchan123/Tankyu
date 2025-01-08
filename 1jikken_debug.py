@@ -17,9 +17,9 @@ data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[
 layer = [100,100,100]
 opt1 = {"opt":"adam", "dec1":0.9, "dec2":0.999,"lr":0.002,"batch_size":64}
 toba_option = { "rmw_type":"corrcoef",
-    　　　　　　　　"epsilon":[0.6,0.6,0.6,0.6],
+                "epsilon":[0.6,0.6,0.6,0.6],
                 "complement":True,
-                "rmw_layer":[2,3,4],
+                "rmw_layer":["Affine2","Affine3","Affine4"],
                 "delete_n":[0,40,40,40] }
                 
 network = Convnetwork(input_size=[784], output_size=10, dense_layer=layer, weightinit=He,drop_rate=[0,0.5])
