@@ -532,16 +532,24 @@ class Toba:
     def __init__ (self,model,x,tobaoption):
         self.model = model
         self.x = x
-        for key, value in tobaoption:
-            setattr(self, key, value)
-
+        
+        self.params = copy.deepcopy(model.params)
+        self.compare_nodes =eval(tobaoption[rmw_type])
+        self.rmw_layer = tobaoption[rmw_layer]
+        
+    def rmw(self):
+        for idx in self.rmw_layer:
+            x = seld.half_predict(idx)
+            rmlist, complist, scalar, bias = compare_nodes(x, idx, self.tobaoption)
+            self.apply(idx,rmlist, complist, scalar, bias)
+            
     def half_predict(self, stop_layer)
         a = self.model.predict(self.x,None,False,stop_layer)
-        if stop_layer[1] = "C":
+        if stop_layer[0] = "C":
             layer = model.layers[stop_layer]
             pad = layer.P
             B,C,Ih,Iw = batch_x.shape
-            F = params["F"+str(conv_index)]
+            F = self.params["F"+str(conv_index)]
             M,C,Fh,Fw = F.shape
             Oh = Ih + 2*pad -Fh + 1
             Ow = Iw + 2*pad -Fw + 1
@@ -556,14 +564,73 @@ class Toba:
         else :
             out = []
             for i in batch_x:            
-                y = (i.reshape(-1,1))*params["W"+str(idx)]
+                y = (i.reshape(-1,1))*self.params["W"+str(idx)]
                 out.append(y)
             out=np.asarray(out)
             out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)
             
         return out
     
-    def aplly(self, layer_type, index):
+    def aplly(self, layer, dellst, complst, scalar, bias):
+        if layer[0] = C:
+            conv_index = layer[-1]
+            self.params["F"+str(conv_index)] = self.params["F"+str(conv_index)] * (scalar.reshape(-1,1,1,1))
+            self.params["Cb"+str(conv_index)] = self.params["Cb"+str(conv_index)] + bias
         
+            self.params["F"+str(conv_index-1)] = np.delete(self.params["F"+str(conv_index-1)],rmlist_s,axis=0)
+            self.params["Cb"+str(conv_index-1)] = np.delete(self.params["Cb"+str(conv_index-1)],rmlist_s)
+            self.params["F"+str(conv_index)] = np.delete(self.params["F"+str(conv_index)],rmlist_s,axis=1)
+        else:
+            idx = layer[-1]
+            self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
+            self.params["b"+str(idx)] = self.params["b"+str(idx)] + bias
             
+            self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist_s,axis=1)
+            self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist_s)
+            self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist_s,axis=0)
+
+def corrcoef(out,layer,tobaoption):
+    epsilon = tobaoption[epsilon]
+    delete_n = tobaoption[epsilon]
+    rmlist = complist = corlist = alist = blist = rmlist_s = complist_s = alist_s = blist_s = []
+    
+    for i in range(0,len(out)-1):
+        for j in range(i+1,len(out)):
+            i_val = out[i]
+            j_val = out[j]
+            sxy = np.average(i_val*j_val) - np.average(i_val)*np.average(j_val)
+            vari = (np.average(i_val**2)) - (np.average(i_val))**2
+            varj = (np.average(j_val**2)) - (np.average(j_val))**2
+            cor = sxy / (np.sqrt(vari)*np.sqrt(varj) + 0.00000001) #1e-10みたいな表記だとうまくいかないなぜ
+            a = sxy/vari
+            b = np.average(j_val) - a*np.average(i_val)
                 
+            corlist.append(abs(cor))
+            rmlist.append(i)
+            complist.append(j)
+            alist.append(a)
+            blist.append(b)                
+        
+    ziplist = zip(corlist,rmlist,complist,alist,blist)
+    zipsort = sorted(ziplist,reverse=True)
+    corlist,rmlist,complist,alist,blist = zip(*zipsort)
+    cnt = 1
+    while len(rmlist_s)<delete_n[rmw_index+idx-2]:
+        if (rmlist[cnt] not in rmlist_s) and (rmlist[cnt] not in complist_s) and (corlist[cnt] > epsilon[rmw_index+idx-2]):
+            rmlist_s.append(rmlist[cnt])
+            complist_s.append(complist[cnt])
+            alist_s.append(alist[cnt])
+            blist_s.append(blist[cnt])
+            print(corlist[cnt])
+        cnt += 1
+        if cnt == len(rmlist):break
+                
+    blist_s = np.array(blist_s)
+    alist_s = np.array(alist_s)
+　　　scalar = np.ones(len(params[layer]))
+    for n in range(len(rmlist_s)):
+        scalar[int(complist_s[n])] += alist_s[n]
+    bias = np.sum(blist_s)
+return rmlist, complist , scalar, bias
+
+        
