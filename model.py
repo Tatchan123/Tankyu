@@ -134,13 +134,12 @@ class Convnetwork:
         
         return grads
         
-    def predict(self,x,t,training):
-        for layer in self.layers.values():
-            
+    def predict(self,x,t,training, stop=""):
+        for key, layer in self.layers.items():
+            if key == stop:
+               break
             x = layer.forward(x,self.params,training)
-            # print(layer)
-            # print(x.shape)
-        y = self.last_layer.forward(x,t,self.params) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
+        else: y = self.last_layer.forward(x,t,self.params) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
         return(x)
     
     
