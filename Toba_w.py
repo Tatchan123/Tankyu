@@ -534,19 +534,19 @@ class Toba:
         self.x = x
         
         self.params = copy.deepcopy(model.params)
-        self.compare_nodes =eval(tobaoption[rmw_type])
-        self.rmw_layer = tobaoption[rmw_layer]
+        self.compare_nodes =eval(tobaoption["rmw_type"])
+        self.rmw_layer = tobaoption["rmw_layer"]
         
     def rmw(self):
         for idx in self.rmw_layer:
-            x = seld.half_predict(idx)
-            rmlist, complist, scalar, bias = compare_nodes(x, idx, self.tobaoption)
+            x = self.half_predict(idx)
+            rmlist, complist, scalar, bias = self.compare_nodes(x, idx, self.tobaoption)
             self.apply(idx,rmlist, complist, scalar, bias)
             
     def half_predict(self, stop_layer):
-        a = self.model.predict(self.x,None,False,stop_layer)
+        batch_x = self.model.predict(self.x,None,False,stop_layer)
         if stop_layer[0] == "C":
-            layer = model.layers[stop_layer]
+            layer = self.model.layers[stop_layer]
             pad = layer.P
             B,C,Ih,Iw = batch_x.shape
             F = self.params["F"+str(conv_index)]
@@ -572,7 +572,7 @@ class Toba:
         return out
     
     def aplly(self, layer, dellst, complst, scalar, bias):
-        if layer[0] == C:
+        if layer[0] == "C":
             conv_index = layer[-1]
             self.params["F"+str(conv_index)] = self.params["F"+str(conv_index)] * (scalar.reshape(-1,1,1,1))
             self.params["Cb"+str(conv_index)] = self.params["Cb"+str(conv_index)] + bias
@@ -627,7 +627,7 @@ def corrcoef(out,layer,tobaoption):
                 
     blist_s = np.array(blist_s)
     alist_s = np.array(alist_s)
-    scalar = np.ones(len(params[layer]))
+    scalar = np.ones(len(self.params[layer]))
     for n in range(len(rmlist_s)):
         scalar[int(complist_s[n])] += alist_s[n]
     bias = np.sum(blist_s)
