@@ -47,7 +47,8 @@ class Trainer:
         #params = toba_type(self.model,self.x_test,self.tobaoption)
         #self.model.updateparams(params)
         tobaclass = Toba(self.model, self.x_test, self.tobaoption)
-        
+        params = tobaclass.rmw()
+        self.model.updateparams(params)
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.model.dense_layer)+2)):
             tmp = np.append(tmp,self.model.params["b"+str(i)].shape)
