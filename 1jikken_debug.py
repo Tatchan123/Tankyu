@@ -16,7 +16,7 @@ data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[
 
 layer = [100,100,100]
 opt1 = {"opt":"adam", "dec1":0.9, "dec2":0.999,"lr":0.002,"batch_size":64}
-toba_option = { "rmw_type":"corrcoef")
+toba_option = { "rmw_type":"corrcoef",
     　　　　　　　　"epsilon":[0.6,0.6,0.6,0.6],
                 "complement":True,
                 "rmw_layer":[2,3,4],
