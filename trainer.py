@@ -32,22 +32,20 @@ class Trainer:
             if type(step) == int:
                 self.optimizer.fit(self.data,self.batch_size,step,self.check)
             else:
-                tobafunc = eval(step)
-                tobaname = step
-                params,result = self.toba_w(tobafunc,tobaname)
+                params,result = self.toba_w()
                 
         
         print("finish")
         return result
 
 
-    def toba_w(self,toba_type,toba_name):
-        print("start Toba_W :",toba_name,"------------------------------------------")
+    def toba_w(self):
+        print("start Toba_W :",self.tobaoption["rmw_layer"],"------------------------------------------")
         acc1 = self.model.accuracy(self.x_test,self.t_test)
         print("    accuracy before Toba_W :", str(acc1))
         #params = toba_type(self.model,self.x_test,self.tobaoption)
         #self.model.updateparams(params)
-        tobaclass = Toba(self.model, self.x_test, self.tobaoption)
+        tobaclass = Toba(self.model, self.x_test, self.t_test, self.tobaoption)
         params = tobaclass.rmw()
         self.model.updateparams(params)
         tmp = [params["W1"].shape[0]]

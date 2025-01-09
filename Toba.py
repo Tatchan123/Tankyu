@@ -7,12 +7,14 @@ else:
 from collections import OrderedDict
 import random
 import copy
+import re
 
 
 class Toba:
-    def __init__ (self,model,x,tobaoption):
+    def __init__ (self,model,x,t,tobaoption):
         self.model = model
         self.x = x
+        self.t = t
         self.tobaoption = tobaoption
         
         self.params = copy.deepcopy(model.params)
@@ -30,8 +32,8 @@ class Toba:
             
     def half_predict(self, stop_layer):
 
-        batch_x = self.model.predict(self.x,None,False,stop_layer)
-        if stop_layer[0] == "C":
+        batch_x = self.model.predict(self.x,self.t,False,stop_layer)
+        if re.match("^Conv2d\d$",stop_layer):
             conv_index = stop_layer[-1]
             layer = self.model.layers[stop_layer]
             pad = layer.P
@@ -77,25 +79,25 @@ class Toba:
             self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist)
             self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
 
-
-def corrcoef(out, layer, tobaoption, params, epsilon, delete_n):
+#correlation-coefficient and least-squares-method
+def coco_ls(out, layer, tobaoption, params, epsilon, delete_n):
     corlist, rmlist, complist, alist, blist = [], [], [], [], []
-
     for i in range(len(out) - 1):
         for j in range(i + 1, len(out)):
             i_val, j_val = out[i], out[j]
             sxy = np.mean(i_val * j_val) - np.mean(i_val) * np.mean(j_val)
             vari = np.var(i_val)
             varj = np.var(j_val)
-            cor = sxy / (np.sqrt(vari * varj) + 1e-8)  
-            a = sxy / (vari + 1e-8)
-            b = np.mean(j_val) - a * np.mean(i_val)
+            cor = sxy / (np.sqrt(vari * varj) + 1e-8)
+            if cor >= epsilon:
+                a = sxy / (vari + 1e-8)
+                b = np.mean(j_val) - a * np.mean(i_val)
 
-            corlist.append(abs(cor))
-            rmlist.append(i)
-            complist.append(j)
-            alist.append(a)
-            blist.append(b)
+                corlist.append(abs(cor))
+                rmlist.append(i)
+                complist.append(j)
+                alist.append(a)
+                blist.append(b)
 
     sorted_data = sorted(zip(corlist, rmlist, complist, alist, blist), reverse=True)
     corlist, rmlist, complist, alist, blist = zip(*sorted_data)
@@ -105,8 +107,7 @@ def corrcoef(out, layer, tobaoption, params, epsilon, delete_n):
         if len(rmlist_s) >= delete_n:
             break
         if (rmlist[cnt] not in rmlist_s and 
-            rmlist[cnt] not in complist_s and 
-            corlist[cnt] > epsilon):
+            rmlist[cnt] not in complist_s):
             rmlist_s.append(rmlist[cnt])
             complist_s.append(complist[cnt])
             alist_s.append(alist[cnt])
