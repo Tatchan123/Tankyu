@@ -523,29 +523,30 @@ def conv_corrcoef_toba(model,x,tobaoption):
         batch_x = model.layers["Activation"+str(idx)].forward(batch_x,params) 
     return params
 
-
-def half_predict(network,layer):
-    x=netwotk.predict(
-
-        
 class Toba:
     def __init__ (self,model,x,tobaoption):
         self.model = model
         self.x = x
+        self.tobaoption = tobaoption
         
         self.params = copy.deepcopy(model.params)
         self.compare_nodes =eval(tobaoption["rmw_type"])
         self.rmw_layer = tobaoption["rmw_layer"]
         
     def rmw(self):
-        for idx in self.rmw_layer:
+        for cnt, idx in enumerate(self.rmw_layer):
             x = self.half_predict(idx)
-            rmlist, complist, scalar, bias = self.compare_nodes(x, idx, self.tobaoption)
+            eps, de = self.tobaoption["epsilon"][cnt], self.tobaoption["delete_n"][cnt]
+            rmlist, complist, scalar, bias = self.compare_nodes(x, idx, self.tobaoption, self.params, eps, de)
             self.apply(idx,rmlist, complist, scalar, bias)
+            print(idx, "delete", len(rmlist), "nodes")
+        return self.params
             
     def half_predict(self, stop_layer):
+
         batch_x = self.model.predict(self.x,None,False,stop_layer)
         if stop_layer[0] == "C":
+            conv_index = stop_layer[-1]
             layer = self.model.layers[stop_layer]
             pad = layer.P
             B,C,Ih,Iw = batch_x.shape
@@ -562,6 +563,7 @@ class Toba:
                 y = np.dot(F[channel],col[channel]).reshape(-1)
                 out.append(y)
         else :
+            idx = stop_layer[-1]
             out = []
             for i in batch_x:            
                 y = (i.reshape(-1,1))*self.params["W"+str(idx)]
@@ -571,66 +573,65 @@ class Toba:
             
         return out
     
-    def aplly(self, layer, dellst, complst, scalar, bias):
+    def apply(self, layer, rmlist, complist, scalar, bias):
         if layer[0] == "C":
-            conv_index = layer[-1]
+            conv_index = int(layer[-1])
             self.params["F"+str(conv_index)] = self.params["F"+str(conv_index)] * (scalar.reshape(-1,1,1,1))
             self.params["Cb"+str(conv_index)] = self.params["Cb"+str(conv_index)] + bias
         
-            self.params["F"+str(conv_index-1)] = np.delete(self.params["F"+str(conv_index-1)],rmlist_s,axis=0)
-            self.params["Cb"+str(conv_index-1)] = np.delete(self.params["Cb"+str(conv_index-1)],rmlist_s)
-            self.params["F"+str(conv_index)] = np.delete(self.params["F"+str(conv_index)],rmlist_s,axis=1)
+            self.params["F"+str(conv_index-1)] = np.delete(self.params["F"+str(conv_index-1)],rmlist,axis=0)
+            self.params["Cb"+str(conv_index-1)] = np.delete(self.params["Cb"+str(conv_index-1)],rmlist)
+            self.params["F"+str(conv_index)] = np.delete(self.params["F"+str(conv_index)],rmlist,axis=1)
         else:
-            idx = layer[-1]
+            idx = int(layer[-1])
             self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
             self.params["b"+str(idx)] = self.params["b"+str(idx)] + bias
             
-            self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist_s,axis=1)
-            self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist_s)
-            self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist_s,axis=0)
+            self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
+            self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist)
+            self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
 
-def corrcoef(out,layer,tobaoption):
-    epsilon = tobaoption[epsilon]
-    delete_n = tobaoption[epsilon]
-    rmlist = complist = corlist = alist = blist = rmlist_s = complist_s = alist_s = blist_s = []
-    
-    for i in range(0,len(out)-1):
-        for j in range(i+1,len(out)):
-            i_val = out[i]
-            j_val = out[j]
-            sxy = np.average(i_val*j_val) - np.average(i_val)*np.average(j_val)
-            vari = (np.average(i_val**2)) - (np.average(i_val))**2
-            varj = (np.average(j_val**2)) - (np.average(j_val))**2
-            cor = sxy / (np.sqrt(vari)*np.sqrt(varj) + 0.00000001) #1e-10みたいな表記だとうまくいかないなぜ
-            a = sxy/vari
-            b = np.average(j_val) - a*np.average(i_val)
-                
+
+def corrcoef(out, layer, tobaoption, params, epsilon, delete_n):
+    corlist, rmlist, complist, alist, blist = [], [], [], [], []
+
+    for i in range(len(out) - 1):
+        for j in range(i + 1, len(out)):
+            i_val, j_val = out[i], out[j]
+            sxy = np.mean(i_val * j_val) - np.mean(i_val) * np.mean(j_val)
+            vari = np.var(i_val)
+            varj = np.var(j_val)
+            cor = sxy / (np.sqrt(vari * varj) + 1e-8)  
+            a = sxy / (vari + 1e-8)
+            b = np.mean(j_val) - a * np.mean(i_val)
+
             corlist.append(abs(cor))
             rmlist.append(i)
             complist.append(j)
             alist.append(a)
-            blist.append(b)                
-        
-    ziplist = zip(corlist,rmlist,complist,alist,blist)
-    zipsort = sorted(ziplist,reverse=True)
-    corlist,rmlist,complist,alist,blist = zip(*zipsort)
-    cnt = 1
-    while len(rmlist_s)<delete_n[rmw_index+idx-2]:
-        if (rmlist[cnt] not in rmlist_s) and (rmlist[cnt] not in complist_s) and (corlist[cnt] > epsilon[rmw_index+idx-2]):
+            blist.append(b)
+
+    sorted_data = sorted(zip(corlist, rmlist, complist, alist, blist), reverse=True)
+    corlist, rmlist, complist, alist, blist = zip(*sorted_data)
+
+    rmlist_s, complist_s, alist_s, blist_s = [], [], [], []
+    for cnt in range(len(rmlist)):
+        if len(rmlist_s) >= delete_n:
+            break
+        if (rmlist[cnt] not in rmlist_s and 
+            rmlist[cnt] not in complist_s and 
+            corlist[cnt] > epsilon):
             rmlist_s.append(rmlist[cnt])
             complist_s.append(complist[cnt])
             alist_s.append(alist[cnt])
             blist_s.append(blist[cnt])
-            print(corlist[cnt])
-        cnt += 1
-        if cnt == len(rmlist):break
-                
-    blist_s = np.array(blist_s)
-    alist_s = np.array(alist_s)
-    scalar = np.ones(len(self.params[layer]))
-    for n in range(len(rmlist_s)):
-        scalar[int(complist_s[n])] += alist_s[n]
+
+    alist_s, blist_s = np.array(alist_s), np.array(blist_s)
+    pidx = "F" + layer[-1] if layer[0] == "C" else "W" + layer[-1]
+    scalar = np.ones(len(params[pidx]))
+    scalar[complist_s] += alist_s
     bias = np.sum(blist_s)
-    return rmlist, complist , scalar, bias
+
+    return rmlist_s, complist_s, scalar, bias
 
         
