@@ -601,7 +601,7 @@ def corrcoef(out, layer, tobaoption, params, epsilon, delete_n):
             sxy = np.mean(i_val * j_val) - np.mean(i_val) * np.mean(j_val)
             vari = np.var(i_val)
             varj = np.var(j_val)
-            cor = sxy / (np.sqrt(vari * varj) + 1e-8)  
+            cor = sxy / (np.sqrt(vari * varj) + 1e-8)
             a = sxy / (vari + 1e-8)
             b = np.mean(j_val) - a * np.mean(i_val)
 
