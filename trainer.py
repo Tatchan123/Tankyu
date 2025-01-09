@@ -6,7 +6,8 @@ else:
     
 import time
 import sys
-from Toba_w import *
+#from Toba_w import *
+from Toba import Toba
 
 class Trainer:
     def __init__(self, model, step, optimizer, data, check, tobaoption=None,scheduler=None):
