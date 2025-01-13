@@ -16,24 +16,28 @@ class Toba:
         self.x = x
         self.t = t
         self.tobaoption = tobaoption
-        
+        self.strict = tobaoption["strict"]
         self.params = copy.deepcopy(model.params)
         self.compare_nodes =eval(tobaoption["rmw_type"])
         self.rmw_layer = tobaoption["rmw_layer"]
         
     def rmw(self):
         for cnt, idx in enumerate(self.rmw_layer):
+            print(f"x:{self.model.predict(self.x,self.t,False,"Affine1").shape} W1:{self.model.params["W1"].shape}")
             x = self.half_predict(idx)
             eps, de = self.tobaoption["epsilon"][cnt], self.tobaoption["delete_n"][cnt]
-            rmlist, complist, scalar, bias = self.compare_nodes(x, idx, self.tobaoption, self.params, eps, de)
-            self.apply(idx,rmlist, complist, scalar, bias)
+            rmlist, scalar, bias = self.compare_nodes(x, idx, self.tobaoption, self.params, eps, de, self.strict)
+            if len(rmlist) != 0:
+                self.apply(idx, rmlist, scalar, bias)
             print(idx, "delete", len(rmlist), "nodes")
+            self.model.updateparams(self.params)
         return self.params
             
     def half_predict(self, stop_layer):
 
         batch_x = self.model.predict(self.x,self.t,False,stop_layer)
-        if re.match("^Conv2d\d$",stop_layer):
+        print(batch_x.shape)
+        if "Conv2d" in stop_layer:
             conv_index = stop_layer[-1]
             layer = self.model.layers[stop_layer]
             pad = layer.P
@@ -58,10 +62,11 @@ class Toba:
                 out.append(y)
             out=np.asarray(out)
             out = (np.transpose(out,(1,0,2))).reshape(len(out[0]),-1)
-            
+        
         return out
     
-    def apply(self, layer, rmlist, complist, scalar, bias):
+    
+    def apply(self, layer, rmlist, scalar, bias):
         if layer[0] == "C":
             conv_index = int(layer[-1])
             self.params["F"+str(conv_index)] = self.params["F"+str(conv_index)] * (scalar.reshape(-1,1,1,1))
@@ -72,15 +77,22 @@ class Toba:
             self.params["F"+str(conv_index)] = np.delete(self.params["F"+str(conv_index)],rmlist,axis=1)
         else:
             idx = int(layer[-1])
-            self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
-            self.params["b"+str(idx)] = self.params["b"+str(idx)] + bias
-            
-            self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
-            self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist)
-            self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+            if idx == 1:
+                self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
+                self.params["b"+str(idx)] = self.params["b"+str(idx)] + bias
 
-#correlation-coefficient and least-squares-method
-def coco_ls(out, layer, tobaoption, params, epsilon, delete_n):
+                self.model.layers["Toba"].init_remove.append(rmlist)
+                self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+            else:
+                self.params["W"+str(idx)] = self.params["W"+str(idx)] * (scalar.reshape(-1,1))
+                self.params["b"+str(idx)] = self.params["b"+str(idx)] + bias
+                
+                self.params["W"+str(idx-1)] = np.delete(self.params["W"+str(idx-1)],rmlist,axis=1)
+                self.params["b"+str(idx-1)] = np.delete(self.params["b"+str(idx-1)],rmlist)
+                self.params["W"+str(idx)] = np.delete(self.params["W"+str(idx)],rmlist,axis=0)
+
+#correlation-coefficient
+def coco_toba(out, layer, tobaoption, params, epsilon, delete_n, strict):
     corlist, rmlist, complist, alist, blist = [], [], [], [], []
     for i in range(len(out) - 1):
         for j in range(i + 1, len(out)):
@@ -98,25 +110,30 @@ def coco_ls(out, layer, tobaoption, params, epsilon, delete_n):
                 complist.append(j)
                 alist.append(a)
                 blist.append(b)
+                if not strict:
+                    break
 
-    sorted_data = sorted(zip(corlist, rmlist, complist, alist, blist), reverse=True)
-    corlist, rmlist, complist, alist, blist = zip(*sorted_data)
+    if len(rmlist) != 0:
+        sorted_data = sorted(zip(corlist, rmlist, complist, alist, blist), reverse=True)
+        corlist, rmlist, complist, alist, blist = zip(*sorted_data)
 
-    rmlist_s, complist_s, alist_s, blist_s = [], [], [], []
-    for cnt in range(len(rmlist)):
-        if len(rmlist_s) >= delete_n:
-            break
-        if (rmlist[cnt] not in rmlist_s and 
-            rmlist[cnt] not in complist_s):
-            rmlist_s.append(rmlist[cnt])
-            complist_s.append(complist[cnt])
-            alist_s.append(alist[cnt])
-            blist_s.append(blist[cnt])
+        rmlist_s, complist_s, alist_s, blist_s = [], [], [], []
+        for cnt in range(len(rmlist)):
+            if len(rmlist_s) >= delete_n:
+                break
+            if (rmlist[cnt] not in rmlist_s and 
+                rmlist[cnt] not in complist_s):
+                rmlist_s.append(rmlist[cnt])
+                complist_s.append(complist[cnt])
+                alist_s.append(alist[cnt])
+                blist_s.append(blist[cnt])
 
-    alist_s, blist_s = np.array(alist_s), np.array(blist_s)
-    pidx = "F" + layer[-1] if layer[0] == "C" else "W" + layer[-1]
-    scalar = np.ones(len(params[pidx]))
-    scalar[complist_s] += alist_s
-    bias = np.sum(blist_s)
-
-    return rmlist_s, complist_s, scalar, bias
+        alist_s, blist_s = np.array(alist_s), np.array(blist_s)
+        pidx = "F" + layer[-1] if layer[0] == "C" else "W" + layer[-1]
+        scalar = np.ones(len(params[pidx]))
+        scalar[complist_s] += alist_s
+        bias = np.sum(blist_s)
+    
+        return rmlist_s, scalar, bias
+    else:
+        return [],[],[]

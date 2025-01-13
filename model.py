@@ -140,6 +140,7 @@ class Convnetwork:
                break
             x = layer.forward(x,self.params,training)
         else: y = self.last_layer.forward(x,t,self.params) #softmaxレイヤーのインスタンスを作りたかったためだけに追加 accuracyで使うことも考えxを返り値に
+        
         return(x)
     
     

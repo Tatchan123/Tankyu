@@ -51,14 +51,15 @@ class Toba:
             for i in self.init_remove:
                 
                 x = np.delete(x,i,axis=1)
+        
         return x
     
     def backward(self,dout,params):
         B = dout.shape[0]
         if len(self.init_remove) != 0:
             for i in self.init_remove.reverse():
-                zeros = np.zeros((len(i),B,dout.shape[1]))
-                dout = np.insert(dout,zeros,i)
+                zeros = np.zeros((B,len(i)))
+                dout = np.insert(dout,i,zeros)
         return dout
 
 class Conv2d:

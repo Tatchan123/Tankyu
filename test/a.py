@@ -3,8 +3,8 @@ import numpy as np
 import openpyxl
 import os
 
-a = 1
+a = np.arange(15).reshape(3,5)
+b = np.array([0,0])
 
-if type(a) == str and "a" in a:
-    print("aaaaa")
-else:print("bbbbb")
+o = np.insert(a,[1,3],b,axis=0)
+print(o)
