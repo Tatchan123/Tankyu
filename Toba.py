@@ -23,7 +23,6 @@ class Toba:
         
     def rmw(self):
         for cnt, idx in enumerate(self.rmw_layer):
-            print(f"x:{self.model.predict(self.x,self.t,False,"Affine1").shape} W1:{self.model.params["W1"].shape}")
             x = self.half_predict(idx)
             eps, de = self.tobaoption["epsilon"][cnt], self.tobaoption["delete_n"][cnt]
             rmlist, scalar, bias = self.compare_nodes(x, idx, self.tobaoption, self.params, eps, de, self.strict)
@@ -36,7 +35,6 @@ class Toba:
     def half_predict(self, stop_layer):
 
         batch_x = self.model.predict(self.x,self.t,False,stop_layer)
-        print(batch_x.shape)
         if "Conv2d" in stop_layer:
             conv_index = stop_layer[-1]
             layer = self.model.layers[stop_layer]
