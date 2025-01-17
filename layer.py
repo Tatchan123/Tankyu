@@ -55,12 +55,13 @@ class Toba:
         return x
     
     def backward(self,dout,params):
-        B = dout.shape[0]
+        B,C = dout.shape
         if len(self.init_remove) != 0:
             for i in reversed(self.init_remove):
-                zeros = np.zeros((B,len(i)))
-                for j in range(len(i)):
-                    dout = np.concatenate((dout[:,:j],zeros[:,j],dout[:,j:]),axis=0)
+                zeros = np.zeros((B,C+len(i)),float)
+                notremoved_index = set(range(C+len(i))) - set(i)
+                zeros[:,sorted(list(notremoved_index))] = dout
+                dout = zeros
         return dout
 
 class Conv2d:
