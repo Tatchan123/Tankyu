@@ -24,11 +24,11 @@ class Convnetwork:
         self.batchnorm = batchnorm
         self.regularize = regularize
         
-        #try:
-        wi = weightinit()
-        self.params = wi.weight_initialization(inp=input_size,layer=dense_layer,convlayer=conv_layer,out=10,batchnorm=self.batchnorm)
-        #except:
-        #    self.params = weightinit
+        try:
+            wi = weightinit()
+            self.params = wi.weight_initialization(inp=input_size,layer=dense_layer,convlayer=conv_layer,out=10,batchnorm=self.batchnorm)
+        except:
+            self.params = weightinit
         
             
         #レイヤ初期化

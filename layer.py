@@ -57,9 +57,10 @@ class Toba:
     def backward(self,dout,params):
         B = dout.shape[0]
         if len(self.init_remove) != 0:
-            for i in self.init_remove.reverse():
+            for i in reversed(self.init_remove):
                 zeros = np.zeros((B,len(i)))
-                dout = np.insert(dout,i,zeros)
+                for j in range(len(i)):
+                    dout = np.concatenate((dout[:,:j],zeros[:,j],dout[:,j:]),axis=0)
         return dout
 
 class Conv2d:

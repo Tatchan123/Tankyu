@@ -8,6 +8,7 @@ import time
 import sys
 #from Toba_w import *
 from Toba import Toba
+from Toba_w import random_rmw
 
 class Trainer:
     def __init__(self, model, step, optimizer, data, check, tobaoption=None,scheduler=None):
@@ -45,8 +46,11 @@ class Trainer:
         print("    accuracy before Toba_W :", str(acc1))
         #params = toba_type(self.model,self.x_test,self.tobaoption)
         #self.model.updateparams(params)
-        tobaclass = Toba(self.model, self.x_test, self.t_test, self.tobaoption)
-        params = tobaclass.rmw()
+        if self.tobaoption["rmw_type"] == "random_toba":
+            params = random_rmw(self.model, self.x_test, self.tobaoption)
+        else:
+            tobaclass = Toba(self.model, self.x_test, self.t_test, self.tobaoption)
+            params = tobaclass.rmw()
         self.model.updateparams(params)
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.model.dense_layer)+2)):

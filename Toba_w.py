@@ -68,7 +68,6 @@ def rmw(model,x,tobaoption):
     return params
 
 
-
 def random_rmw(model,x,tobaoption):
     rmw_layer, delete_n = [tobaoption[key] for key in ["rmw_layer", "delete_n"]]
     params = model.params
