@@ -96,6 +96,7 @@ class Optimizer():
             if (i+1) % check == 0:
                 acc = self.model.accuracy(x_test,t_test)
                 print("epoch:",str(i)," |  accuracy:"+str(acc),"loss:"+str(self.model.cal_loss(x_test,t_test)))
+        return self.model.accuracy(x_test,t_test)
         
     def Adam(self,data,batchsize,max_epoch,check):
         x_train = data["x_train"]
@@ -139,7 +140,7 @@ class Optimizer():
                 print("epoch:",str(i+1)," |  accuracy:"+str(acc),"loss:"+str(loss))
                 print("traindata  |  accuracy:"+str(self.model.accuracy(x_batch,t_batch)),"loss:"+str(self.model.cal_loss(x_batch,t_batch)))
                 print("---------------------------------------------------------------")
-
+        return self.model.accuracy(x_test,t_test)
         
 class Scheduler():
     """

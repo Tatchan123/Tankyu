@@ -49,7 +49,6 @@ class Toba:
     def forward(self,x,params,training=False):
         if len(self.init_remove) != 0:
             for i in self.init_remove:
-                
                 x = np.delete(x,i,axis=1)
         
         return x

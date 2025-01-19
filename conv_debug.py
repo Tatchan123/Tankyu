@@ -16,7 +16,7 @@ data_n = 8192
 
 x_train, t_train, x_test, t_test = load_cifar10(normalize=True, means=[0.5,0.5,0.5], stds=[0.5,0.5,0.5])
 #(x_train, t_train),(x_test, t_test) = load_mnist(normalize=True,flatten=False)
-data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[:512], "t_test":t_test[:512]}
+data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[:1024], "t_test":t_test[:1024]}
 
 
 layer1 = [512,256,128]

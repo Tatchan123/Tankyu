@@ -13,7 +13,7 @@ from params_init import *
 import pickle
 import openpyxl as pyxl
 
-data_n = 16384
+data_n = 512
 
 
 #x_train, t_train, x_test, t_test = load_cifar10(normalize=True, means=[0.5,0.5,0.5], stds=[0.5,0.5,0.5])
@@ -30,11 +30,11 @@ toba_option = {"rmw_type":"coco_toba","epsilon":[0.0,0.0,0.0],"complement":True,
 
 random_results = []
 coco_results = []
-cocofit_results = []
+fit_results = []
 
 
-for delpar in [0.2,0.4,0.6,0.8,1.0]:
-    dels = [int(512*delpar),int(256*delpar),int(128*delpar)]
+for delper in [0.1]:
+    dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
     
 
     network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
@@ -43,25 +43,41 @@ for delpar in [0.2,0.4,0.6,0.8,1.0]:
 
     global_params = network.params
 
-    random_option = {"rmw_type":"random_rmw","epsilon":[0.0,0.0,0.0],"complement":True, "rmw_layer":[1,2,3],"delete_n":dels,"strict":True}
-    random_model = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=global_params, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
+    random_option = {"rmw_type":"random_toba","epsilon":[0.0,0.0,0.0,0.0],"complement":True, "rmw_layer":["Affine1","Affine2","Affine3","Affine4"],"delete_n":dels,"strict":True}
+    random_model = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=copy.deepcopy(global_params), activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     random_toba = Trainer(random_model, step=['toba'], optimizer=opt2, data=data, check=5, tobaoption=random_option, scheduler=exp)
     random_dacc, random_acc2 = random_toba.fit()
     random_results.append([random_dacc,random_acc2])
 
-    coco_option = {"rmw_type":"coco_toba","epsilon":[0.0,0.0,0.0],"complement":True,"rmw_layer":["Affine1","Affine2","Affine3"],"delete_n":dels,"strict":True}
-    coco_model = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=global_params, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
+    coco_option = {"rmw_type":"coco_toba","epsilon":[0.0,0.0,0.0,0.0],"complement":True,"rmw_layer":["Affine1","Affine2","Affine3","Affine4"],"delete_n":dels,"strict":True}
+    coco_model = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=copy.deepcopy(global_params), activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     coco_toba = Trainer(coco_model, step=['toba'], optimizer=opt2, data=data, check=5, tobaoption=coco_option,scheduler=exp)
     coco_dacc, coco_acc2 = coco_toba.fit()
     coco_results.append([coco_dacc,coco_acc2])
 
 
-final_result = [random_results,coco_results]
+    fit_toba = Trainer(coco_model, step=[5], optimizer=opt2, data=data, check=5, tobaoption=coco_option,scheduler=exp)
+    fit_dacc,cocofit_acc2 = fit_toba.fit()
+    fit_results.append([fit_dacc,cocofit_acc2])
+
+final_result = {"random_result":random_results,"coco_result":coco_results,"cocofit_result":fit_results}
 
 with open('exp1result.pkl','wb') as f:
     pickle.dump(final_result, f)
 
 
+wb = pyxl.load_workbook('result1.xlsx')
+sheet = wb['Sheet1']
 
+for i in range(random_results):
+    sheet.cell(2,i+1).value = random_results[i][0]
+    sheet.cell(3,i+1).value = random_results[i][1]
 
+    sheet.cell(4,i+1).value = coco_results[i][0]
+    sheet.cell(5,i+1).value = coco_results[i][1]
 
+    sheet.cell(6,i+1).value = fit_results[i][0]
+    sheet.cell(7,i+1).value = fit_results[i][1]
+
+wb.save()
+wb.close()

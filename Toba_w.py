@@ -71,11 +71,12 @@ def rmw(model,x,tobaoption):
 def random_rmw(model,x,tobaoption):
     rmw_layer, delete_n = [tobaoption[key] for key in ["rmw_layer", "delete_n"]]
     params = model.params
-    for idx in rmw_layer:
-        lst = random.sample(list(range(len(params["W"+str(idx)]))), delete_n[idx-1])
+    for layer in rmw_layer:
+        idx = int(layer[-1])
+        lst = np.random.choice(np.arange(len(params["W"+str(idx)])), delete_n[idx-1])
         if idx == 1:
             params["W1"] = np.delete(params["W1"],lst,axis=0)
-            params["init_remove"].append(lst)
+            model.layers["Toba"].init_remove.append(lst)
         
         else:    
             params["W"+str(idx-1)] = np.delete(params["W"+str(idx-1)],lst,axis=1)
