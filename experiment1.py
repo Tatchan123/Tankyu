@@ -25,12 +25,34 @@ layer1 = [512,256,128]
 conv_layer1 = [[32,3,1],[2],[64,3,1],[2],[128,3,1],[2]]
 opt2 = {"opt":"adam", "dec1":0.9, "dec2":0.999,"lr":0.002,"batch_size":64}
 exp = {"method":"exp", "base":0.92}
-toba_option = {"rmw_type":"coco_toba","epsilon":[0.0,0.0,0.0],"complement":True,"rmw_layer":["Affine1","Affine2","Affine3"],"delete_n":[156,78,39],"strict":True}
+#toba_option = {"rmw_type":"coco_toba","epsilon":[0.0,0.0,0.0],"complement":True,"rmw_layer":["Affine1","Affine2","Affine3"],"delete_n":[156,78,39],"strict":True}
 
 
 random_results = []
 coco_results = []
 fit_results = []
+
+while True:
+    network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
+    base = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
+    base.fit(10)
+    base.coco_sort(["Affine2","Affine3","Affine4"])
+    for delper in [0.1,0.5]:
+        dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
+        
+        random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine2","Affine3","Affine4"],dels)
+        random_results.append(random)
+        
+        cocotest = copy.deepcopy(base)
+        coco = cocotest.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],dels,[0.0,0.0,0.0,0.0])
+        coco_results.append(coco)
+        
+        fit_results.append(cocotest.fit(5))
+        
+    with open('exp1result.pkl','wb') as f:
+        pickle.dump(random_results, f)
+        pickle.dump(coco_results, f)
+        pickle.dump(fit_results, f)
 
 
 for delper in [0.1]:
@@ -38,16 +60,12 @@ for delper in [0.1]:
     
 
     network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
-    test = Trainer(network, step=[10], optimizer=opt2, data=data, check=5, tobaoption=None, scheduler=exp)
-    test.fit()
+    base = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
+    base.fit(10)
 
-    global_params = network.params
 
-    random_option = {"rmw_type":"random_toba","epsilon":[0.0,0.0,0.0,0.0],"complement":True, "rmw_layer":["Affine1","Affine2","Affine3","Affine4"],"delete_n":dels,"strict":True}
-    random_model = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=copy.deepcopy(global_params), activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
-    random_toba = Trainer(random_model, step=['toba'], optimizer=opt2, data=data, check=5, tobaoption=random_option, scheduler=exp)
-    random_dacc, random_acc2 = random_toba.fit()
-    random_results.append([random_dacc,random_acc2])
+    random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine1","Affine2","Affine3","Affine4"],dels)
+    random_results.append(random)
 
     coco_option = {"rmw_type":"coco_toba","epsilon":[0.0,0.0,0.0,0.0],"complement":True,"rmw_layer":["Affine1","Affine2","Affine3","Affine4"],"delete_n":dels,"strict":True}
     coco_model = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=copy.deepcopy(global_params), activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])

@@ -7,13 +7,13 @@ else:
 import time
 import sys
 #from Toba_w import *
-from Toba import Toba
-from Toba_w import random_rmw
+#from Toba import Toba
+#from Toba_w import random_rmw
+from Toba2 import Toba
 
 class Trainer:
-    def __init__(self, model, step, optimizer, data, check, tobaoption=None,scheduler=None):
+    def __init__(self, model, optimizer, data, check,scheduler=None):
         
-        self.step = step
         self.x_train = data["x_train"]
         self.t_train = data["t_train"]
         self.x_test = data["x_test"]
@@ -21,25 +21,38 @@ class Trainer:
         self.data = data
         self.batch_size = optimizer["batch_size"]
         self.check = check
-        self.tobaoption = tobaoption
-        
         self.model = model
         self.optimizer = Optimizer(self.model,optimizer, scheduler)
+        self.tobaclass = Toba(self.model,self.x_test, self.t_test)
         
-    def fit(self):
+    def fit(self,epoch):
         print("start")
-        result = None
-        for step in self.step:
-            if type(step) == int:
-                self.optimizer.fit(self.data,self.batch_size,step,self.check)
-            else:
-                params,result = self.toba_w()
-                
-        
+        acc=self.optimizer.fit(self.data,self.batch_size,epoch,self.check)
         print("finish")
-        return result
+        return acc
 
-
+    def coco_sort(self,rmw_layer): self.tobaclass.coco_sort(rmw_layer)
+    
+    def rmw_fit(self,tobatype,rmw_layer, delete_n, epsilon=None):
+        print("start",tobatype,":",rmw_layer,"------------------------------------------")
+        acc1 = self.model.accuracy(self.x_test,self.t_test)
+        print("    accuracy before Toba_W :", str(acc1))
+        if tobatype == "coco_toba":
+            params = self.tobaclass.coco_pick(delete_n,epsilon)
+        else:
+            params = self.tobaclass.random_toba(rmw_layer, delete_n)
+        self.model.updateparams(params)
+        
+        tmp = [params["W1"].shape[0]]
+        for i in range(1,int(len(self.model.dense_layer)+2)):
+            tmp = np.append(tmp,self.model.params["b"+str(i)].shape)
+        print("    Composition of Network :",tmp)
+        acc2 = self.model.accuracy(self.x_test,self.t_test)
+        print("    accuracy after rmw :",str(acc2))
+        print("finish Toba_W ------------------------------------------")
+        return {"dacc":acc2-acc1,"acc":acc2}
+    
+"""   
     def toba_w(self):
         print("start Toba_W :",self.tobaoption["rmw_layer"],"------------------------------------------")
         acc1 = self.model.accuracy(self.x_test,self.t_test)
@@ -60,7 +73,7 @@ class Trainer:
         print("    accuracy after rmw :",str(acc2))
         print("finish Toba_W ------------------------------------------")
         return self.model.params, {"dacc":acc2-acc1,"acc":acc2}
-        
+"""
         
         
 
