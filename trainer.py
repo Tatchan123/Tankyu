@@ -46,7 +46,7 @@ class Trainer:
         tmp = [params["W1"].shape[0]]
         for i in range(1,int(len(self.model.dense_layer)+2)):
             tmp = np.append(tmp,self.model.params["b"+str(i)].shape)
-        print("    Composition of Network :",tmp)
+        print("    Structure of Network :",tmp)
         acc2 = self.model.accuracy(self.x_test,self.t_test)
         print("    accuracy after rmw :",str(acc2))
         print("finish Toba_W ------------------------------------------")

@@ -6,7 +6,6 @@ if Use_Gpu:
     import cupy as np
 else:
     import numpy as np
-#padとかスライスでcupyがなんか事故るので両方いれる
     
 from collections import OrderedDict
 import copy
@@ -170,7 +169,7 @@ class Convnetwork:
 
 
     def updateparams(self,params):
-        self.params = params
+        self.params = copy.deepcopy(params)
 
 
         
