@@ -40,10 +40,10 @@ class Toba:
 
     def coco_pick(self,delete_n,epsilon):
         all_rmlist  , all_scalar, all_bias = {},{},{}
-        for idx, layer in enumerate(self.rmw_layer):
+        for layer in self.rmw_layer:
             rmlist_s, complist_s, alist_s, blist_s = [], [], [], []
             for cnt in range(len(self.rmlist[layer])):
-                if len(rmlist_s) >= delete_n[idx]:
+                if len(rmlist_s) >= delete_n[int(layer[-1])]:
                     break
                 if self.rmlist[layer][cnt] not in rmlist_s and self.rmlist[layer][cnt] not in complist_s :
                     rmlist_s.append(self.rmlist[layer][cnt])
@@ -103,8 +103,8 @@ class Toba:
                 vari = np.var(i_val)
                 varj = np.var(j_val)
                 cor = sxy / (np.sqrt(vari * varj) + 1e-8)
-                a = sxy / (vari + 1e-8)
-                b = np.mean(j_val) - a * np.mean(i_val)
+                a = sxy / (varj + 1e-8)
+                b = np.mean(i_val) - a * np.mean(j_val)
     
                 corlist.append(abs(cor))
                 rmlist.append(i)
