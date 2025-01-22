@@ -29,7 +29,7 @@ class Trainer:
         print("start")
         acc=self.optimizer.fit(self.data,self.batch_size,epoch,self.check)
         print("finish")
-        return acc
+        return float(acc)
 
     def coco_sort(self,rmw_layer): self.tobaclass.coco_sort(rmw_layer)
     
@@ -50,7 +50,7 @@ class Trainer:
         acc2 = self.model.accuracy(self.x_test,self.t_test)
         print("    accuracy after rmw :",str(acc2))
         print("finish Toba_W ------------------------------------------")
-        return {"dacc":acc2-acc1,"acc":acc2}
+        return {"dacc":float(acc2-acc1),"acc":float(acc2)}
     
 """   
     def toba_w(self):

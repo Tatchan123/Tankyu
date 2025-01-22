@@ -12,6 +12,8 @@ from trainer import *
 from params_init import *
 import pickle
 import openpyxl as pyxl
+import threading
+
 
 data_n = 512
 
@@ -30,45 +32,65 @@ random_results = []
 coco_results = []
 fit_results = []
 
-while True:
+random_tmp = []
+coco_tmp = []
+fit_tmp = []
+
+def input_quit():
+    while True:
+        user_input = input("type 'qexperiment1_mnist.py' to quit")
+        if user_input.lower() == 'q':
+            global running
+            running = False
+            break
+
+
+running = True
+input_quit = threading.Thread(target=input_quit)
+input_quit.start()
+
+
+
+while running:
+    i = 0
     network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     base = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
     base.fit(10)
     base.coco_sort(["Affine2","Affine3","Affine4"])
-    for delper in [0.1,0.5]:
-        #dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
-        dels = [10,10,10,10]
+    for delper in [0.1,0.2,0.3,0.4,0.5,0.6,0.7]:
+        dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
+
         
         random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine2","Affine3","Affine4"],dels)
-        random_results.append(random)
+        random_tmp.append(random["acc"])
         
         cocotest = copy.deepcopy(base)
         coco = cocotest.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],dels,[0.0,0.0,0.0,0.0])
-        coco_results.append(coco["acc"])
+        coco_tmp.append(coco["acc"])
         
-        fit_results.append(cocotest.fit(5))
-        
+        fit_tmp.append(cocotest.fit(5))
+    
+    random_results.append(random_tmp)
+    coco_results.append(coco_tmp)
+    fit_results.append(fit_tmp)
+    
     with open('exp1result.pkl','wb') as f:
         pickle.dump(random_results, f)
         pickle.dump(coco_results, f)
         pickle.dump(fit_results, f)
     print("saved")
-    break
 
 
+    wb = pyxl.load_workbook('result1.xlsx')
+    sheet = wb['Sheet1']
+    for j in range(len(random_results[0])):
+        sheet.cell(row=j+2, column=i+4).value = random_results[-1][j]
 
-wb = pyxl.load_workbook('result1.xlsx')
-sheet = wb['Sheet1']
+        sheet.cell(row=j+3+len(random_results[0]), column=i+4).value = coco_results[-1][j]
 
-for i in range(len(random_results)):
-    sheet.cell(2,i+1).value = random_results[i][0]
-    sheet.cell(3,i+1).value = random_results[i][1]
+        sheet.cell(row=j+4+2*len(random_results[0]), column=i+4).value = fit_results[-1][j]
 
-    sheet.cell(4,i+1).value = coco_results[i][0]
-    sheet.cell(5,i+1).value = coco_results[i][1]
 
-    sheet.cell(6,i+1).value = fit_results[i][0]
-    sheet.cell(7,i+1).value = fit_results[i][1]
-
-wb.save()
-wb.close()
+    wb.save('result1.xlsx')
+    wb.close()
+    i += 1
