@@ -58,7 +58,7 @@ class Toba:
         if len(self.init_remove) != 0:
             for i in reversed(self.init_remove):
                 zeros = np.zeros((B,C+len(i)),float)
-                notremoved_index = set(range(C+len(i))) - set(i.tolist())
+                notremoved_index = set(range(C+len(i))) - set(np.asarray(i).tolist())
                 zeros[:,sorted(list(notremoved_index))] = dout
                 dout = zeros
         return dout
