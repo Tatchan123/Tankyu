@@ -38,7 +38,7 @@ fit_tmp = []
 
 def input_quit():
     while True:
-        user_input = input("type 'qexperiment1_mnist.py' to quit")
+        user_input = input("type 'q' to quit")
         if user_input.lower() == 'q':
             global running
             running = False
@@ -57,7 +57,7 @@ while running:
     base = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
     base.fit(10)
     base.coco_sort(["Affine2","Affine3","Affine4"])
-    for delper in [0.1,0.5]:
+    for delper in [0.1,0.3,0.5,]:
         dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
 
         
@@ -78,7 +78,7 @@ while running:
         pickle.dump(random_results, f)
         pickle.dump(coco_results, f)
         pickle.dump(fit_results, f)
-    print("saved")
+    
 
 
     wb = pyxl.load_workbook('result1.xlsx')
@@ -93,4 +93,5 @@ while running:
 
     wb.save('result1.xlsx')
     wb.close()
+    print("saved")
     i += 1

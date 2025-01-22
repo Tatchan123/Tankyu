@@ -36,7 +36,7 @@ class He:
 
                 elif len(conv_layer[idx]) == 1:
 
-                    vpad = hpad = (Ih - conv_layer[idx][0]) / 2 % 1 != 0
+                    vpad = hpad = (Ih - conv_layer[idx][0]) % 2
                     Ih = (Ih - conv_layer[idx][0] + vpad)//2 + 1
                     Iw = (Iw - conv_layer[idx][0] + hpad)//2 + 1
                         #パディングの操作

@@ -38,7 +38,7 @@ fit_tmp = []
 
 def input_quit():
     while True:
-        user_input = input("type 'qexperiment1_mnist.py' to quit")
+        user_input = input("type 'q' to quit")
         if user_input.lower() == 'q':
             global running
             running = False
@@ -50,14 +50,15 @@ input_quit = threading.Thread(target=input_quit)
 input_quit.start()
 
 
+i = 0
 
 while running:
-    i = 0
+
     network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     base = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
     base.fit(10)
     base.coco_sort(["Affine2","Affine3","Affine4"])
-    for delper in [0.1,0.2,0.3,0.4,0.5,0.6,0.7]:
+    for delper in [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7]:
         dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
 
         
@@ -78,7 +79,7 @@ while running:
         pickle.dump(random_results, f)
         pickle.dump(coco_results, f)
         pickle.dump(fit_results, f)
-    print("saved")
+    
 
 
     wb = pyxl.load_workbook('result1.xlsx')
@@ -86,11 +87,15 @@ while running:
     for j in range(len(random_results[0])):
         sheet.cell(row=j+2, column=i+4).value = random_results[-1][j]
 
-        sheet.cell(row=j+3+len(random_results[0]), column=i+4).value = coco_results[-1][j]
+        sheet.cell(row=j+4+len(random_results[0]), column=i+4).value = coco_results[-1][j]
 
-        sheet.cell(row=j+4+2*len(random_results[0]), column=i+4).value = fit_results[-1][j]
+        sheet.cell(row=j+6+2*len(random_results[0]), column=i+4).value = fit_results[-1][j]
 
 
     wb.save('result1.xlsx')
     wb.close()
+    print("saved")
     i += 1
+    random_tmp = []
+    coco_tmp = []
+    fit_tmp = []

@@ -54,7 +54,8 @@ class Toba:
             alist_s, blist_s = np.array(alist_s), np.array(blist_s)
             scalar = np.ones(len(self.params["W"+(layer[-1])]))
             scalar[complist_s] += alist_s
-            bias = np.sum(blist_s)
+            bias = np.zeros_like(self.params["b"+(layer[-1])])
+            bias[complist_s] += np.sum(blist_s)
             
             all_rmlist[layer] = rmlist_s
             all_scalar[layer] = scalar
