@@ -14,9 +14,9 @@ class Toba:
         self.model = model
         self.x = x
         self.t = t
-        self.params = copy.deepcopy(self.model.params)
         
     def random_toba(self, rmw_layer, delete_n):
+        self.params = copy.deepcopy(self.model.params)
         self.rmw_layer = rmw_layer
         rmlist = {}
         scalar = {}
@@ -31,6 +31,7 @@ class Toba:
         return self.params
     
     def coco_sort(self,rmw_layer):
+        self.params = copy.deepcopy(self.model.params)
         self.rmw_layer = rmw_layer
         self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
         for layer in self.rmw_layer:
@@ -103,8 +104,8 @@ class Toba:
                 vari = np.var(i_val)
                 varj = np.var(j_val)
                 cor = sxy / (np.sqrt(vari * varj) + 1e-8)
-                a = sxy / (vari + 1e-8)
-                b = np.mean(j_val) - a * np.mean(i_val)
+                a = sxy / (varj + 1e-8)
+                b = np.mean(i_val) - a * np.mean(j_val)
     
                 corlist.append(abs(cor))
                 rmlist.append(i)
