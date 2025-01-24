@@ -28,7 +28,7 @@ network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense
 test = Trainer(network, optimizer=opt2, data=data, check=1, scheduler=exp)
 test.fit(3)
 
-test.epsilon_coco_sort([0.5,0.5,0.5,0.5],["Affine2","Affine3","Affine4"])
-test.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],[400,100,50,25],[0.0,0.0,0.0,0.0])
-
-
+for eps in [0.2,0.3,0.4,0.5]:
+    cp = copy.deepcopy(test)
+    cp.epsilon_coco_sort([eps,eps,eps,eps],["Affine1","Affine2","Affine3","Affine4"])
+    cp.rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],[2048,512,256,128])

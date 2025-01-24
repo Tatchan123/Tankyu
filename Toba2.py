@@ -39,6 +39,16 @@ class Toba:
             self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.prev_coco(x)
             print("  ",layer,"done")
 
+    def epsilon_coco_sort(self,rmw_layer,epsilon):
+        self.params = copy.deepcopy(self.model.params)
+        self.rmw_layer = rmw_layer
+        self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
+        for layer in self.rmw_layer:
+            x = self.half_predict(layer)
+            eps = epsilon[int(layer[-1])-1]
+            self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.epsilon_coco(x,eps)
+            print("  ",layer,"done")
+
     def coco_sort(self,delete_n,rmw_layer):
         self.params = copy.deepcopy(self.model.params)
         self.rmw_layer = rmw_layer
@@ -128,7 +138,7 @@ class Toba:
         complist = complist.ravel()
         alist = a_matrix.ravel()
         blist = b_matrix.ravel()
-        highcoco = np.argpartition(corlist,(4*de))[(len(corlist)-4*de):]
+        highcoco = np.argpartition(corlist,(3*de))[(len(corlist)-3*de):]
         corlist = corlist[highcoco]
         rmlist = rmlist[highcoco]
         complist = complist[highcoco]
@@ -144,7 +154,48 @@ class Toba:
         complist = complist[::2]
         alist = alist[::2]
         blist = blist[::2]
+        print(corlist[:30])
+        return corlist , rmlist , complist , alist , blist
 
+    def epsilon_coco(self,out,epsilon):
+        corlist, alist, blist = [], [], []
+        
+        rmlist,complist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
+        means = np.mean(out,axis=1)
+        sxy = np.cov(out)
+        cor_matrix = abs(np.corrcoef(out))
+        a_matrix = np.zeros_like(sxy,dtype=float)
+        b_matrix = np.zeros_like(sxy,dtype=float)
+        for j in range(cor_matrix.shape[1]):
+            a_matrix[j] = sxy[j] / (sxy[j,j]+1e-8)
+            b_matrix[j] = means - a_matrix[j] * means[j]
+            cor_matrix[j,j] = 0.
+
+        corlist = cor_matrix.ravel()
+        rmlist = rmlist.ravel()
+        complist = complist.ravel()
+        alist = a_matrix.ravel()
+        blist = b_matrix.ravel()
+        highcoco = (corlist >= epsilon)
+        corlist = corlist[highcoco]
+        rmlist = rmlist[highcoco]
+        complist = complist[highcoco]
+        alist = alist[highcoco]
+        blist = blist[highcoco]
+        if len(rmlist) != 0:
+            sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist),key=lambda x:x[0], reverse=True)
+            corlist, rmlist, complist, alist, blist = zip(*sorted_data)
+        
+
+            #共分散行列の右上と左下が対称で値がかぶっているので、スライスで半分にする
+            corlist = corlist[::2]
+            rmlist = rmlist[::2]
+            complist = complist[::2]
+            alist = alist[::2]
+            blist = blist[::2]
+            print(corlist[:30])
+        else:
+            corlist,rmlist,complist,alist,blist = [],[],[],[],[]
         return corlist , rmlist , complist , alist , blist
 
 
