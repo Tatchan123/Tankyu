@@ -41,6 +41,19 @@ class Relu:
         dx = dout
         return dx
 
+class LeakyRelu:
+    def __init__(self,alpha):
+        self.mask = None
+        self.alpha = alpha
+    
+    def forward(self,x,params,training=False):
+        self.mask = (x < 0)
+        x[self.mask] = x[self.mask] * self.alpha
+        return x
+    def backward(self,dout,params):
+        dout[self.mask] = dout[self.mask] * self.alpha
+        return dout
+
 
 class Toba:
     def __init__(self):
