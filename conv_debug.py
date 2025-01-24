@@ -11,12 +11,12 @@ from model import *
 from trainer import *
 from params_init import *
 
-data_n = 8192
+data_n = 512
 
 
 #x_train, t_train, x_test, t_test = load_cifar10(normalize=True, means=[0.5,0.5,0.5], stds=[0.5,0.5,0.5])
 (x_train, t_train),(x_test, t_test) = load_mnist(normalize=True,flatten=False)
-data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[:1024], "t_test":t_test[:1024]}
+data = {"x_train":x_train[:data_n], "t_train":t_train[:data_n], "x_test":x_test[:256], "t_test":t_test[:256]}
 
 
 layer1 = [512,256,128]
@@ -26,5 +26,11 @@ exp = {"method":"exp", "base":0.92}
 
 network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.35], regularize=["l2",0.0005])
 test = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
-test.fit(50)
+test.fit(10)
+prev = copy.deepcopy(test)
+test.coco_sort(["Affine2","Affine3","Affine4"])
+test.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],[0,50,25,12],[0.0,0.0,0.0,0.0])
 
+
+prev.prev_coco_sort(["Affine2","Affine3","Affine4"])
+prev.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],[0,50,25,12],[0.0,0.0,0.0,0.0])

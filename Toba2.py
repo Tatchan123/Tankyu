@@ -30,6 +30,15 @@ class Toba:
         self.apply(rmlist,scalar,bias)
         return self.params
     
+    def prev_coco_sort(self,rmw_layer):
+        self.params = copy.deepcopy(self.model.params)
+        self.rmw_layer = rmw_layer
+        self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
+        for layer in self.rmw_layer:
+            x = self.half_predict(layer)
+            self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.prev_coco(x)
+            print("  ",layer,"done")
+
     def coco_sort(self,rmw_layer):
         self.params = copy.deepcopy(self.model.params)
         self.rmw_layer = rmw_layer
@@ -46,7 +55,7 @@ class Toba:
             for cnt in range(len(self.rmlist[layer])):
                 if len(rmlist_s) >= delete_n[int(layer[-1])-1]:
                     break
-                if self.rmlist[layer][cnt] not in rmlist_s and self.rmlist[layer][cnt] not in complist_s :
+                elif self.rmlist[layer][cnt] not in rmlist_s and self.rmlist[layer][cnt] not in complist_s:
                     rmlist_s.append(self.rmlist[layer][cnt])
                     complist_s.append(self.complist[layer][cnt])
                     alist_s.append(self.alist[layer][cnt])
@@ -96,7 +105,43 @@ class Toba:
         return out
     
     def coco(self, out):
-        corlist, rmlist, complist, alist, blist = [], [], [], [], []
+        corlist, alist, blist = [], [], []
+        
+    
+        
+        complist,rmlist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
+        means = np.mean(out,axis=1)
+        sxy = np.cov(out)
+        cor_matrix = np.corrcoef(out)
+        a_matrix = np.zeros_like(sxy,dtype=float)
+        b_matrix = np.zeros_like(sxy,dtype=float)
+        for j in range(cor_matrix.shape[1]):
+            a_matrix[:,j] = sxy[:,j] / sxy[j,j]
+            b_matrix[:,j] = means - a_matrix[:,j] * means[j]
+        
+        mask = cor_matrix.ravel() != 1.
+        corlist = cor_matrix.ravel()[mask]
+        
+        alist = a_matrix.ravel()[mask]
+        blist = b_matrix.ravel()[mask]
+        rmlist = rmlist.ravel()[mask]
+        complist = complist.ravel()[mask]
+
+        sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist), reverse=True)
+        corlist, rmlist, complist, alist, blist = zip(*sorted_data)
+        #共分散行列の右上と左下が対称で値がかぶっているので、スライスで半分にする
+
+        corlist = corlist
+        rmlist = rmlist
+        complist = complist
+        alist = alist
+        blist = blist
+
+        return corlist , rmlist , complist , alist , blist
+
+
+    def prev_coco(self,out):
+        corlist,rmlist, complist, alist, blist = [], [], [],[],[]
         for i in range(len(out) - 1):
             print("\r","sorting",str(i)+("/")+str(len(out)-2),end="")
             for j in range(i + 1, len(out)):
@@ -113,6 +158,8 @@ class Toba:
                 complist.append(j)
                 alist.append(a)
                 blist.append(b)
-        sorted_data = sorted(zip(corlist, rmlist, complist, alist, blist), reverse=True)
+
+        sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist), reverse=True)
         corlist, rmlist, complist, alist, blist = zip(*sorted_data)
+
         return corlist , rmlist , complist , alist , blist

@@ -1,11 +1,9 @@
-import gpu
-if gpu.Use_Gpu:
-    import cupy as np
-else:
-    import numpy as np
+import cupy as np
 from collections import OrderedDict
 import copy
 
-class Huh:
-    def __init__ (self,ins,n):
-        self.a = ins.s+n
+rm = np.arange(5)
+co = np.arange(5)
+
+g = zip(np.meshgrid(rm,co))
+print(*g)
