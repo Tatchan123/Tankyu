@@ -32,6 +32,7 @@ class Toba:
     
     def prev_coco_sort(self,rmw_layer):
         self.params = copy.deepcopy(self.model.params)
+        print("start sorting")
         self.rmw_layer = rmw_layer
         self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
         for layer in self.rmw_layer:
@@ -51,6 +52,7 @@ class Toba:
 
     def coco_sort(self,delete_n,rmw_layer):
         self.params = copy.deepcopy(self.model.params)
+        print("start  sorting")
         self.rmw_layer = rmw_layer
         self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
         for layer in self.rmw_layer:
@@ -75,7 +77,7 @@ class Toba:
             scalar = np.ones(len(self.params["W"+(layer[-1])]))
             scalar[complist_s] += alist_s
             bias = np.zeros_like(self.params["b"+(layer[-1])])
-            bias[complist_s] += np.sum(blist_s)
+            bias += np.sum(blist_s)
             
             all_rmlist[layer] = rmlist_s
             all_scalar[layer] = scalar
@@ -122,15 +124,15 @@ class Toba:
         
         corlist, alist, blist = [], [], []
         
-        rmlist,complist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
+        complist,rmlist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
         means = np.mean(out,axis=1)
         sxy = np.cov(out)
         cor_matrix = abs(np.corrcoef(out))
         a_matrix = np.zeros_like(sxy,dtype=float)
         b_matrix = np.zeros_like(sxy,dtype=float)
         for j in range(cor_matrix.shape[1]):
-            a_matrix[j] = sxy[j] / (sxy[j,j]+1e-8)
-            b_matrix[j] = means - a_matrix[j] * means[j]
+            a_matrix[:,j] = sxy[:,j] / (sxy[j,j]+1e-8)
+            b_matrix[:,j] = means - a_matrix[:,j] * means[j]
             cor_matrix[j,j] = 0.
 
         corlist = cor_matrix.ravel()
@@ -138,12 +140,12 @@ class Toba:
         complist = complist.ravel()
         alist = a_matrix.ravel()
         blist = b_matrix.ravel()
-        highcoco = np.argpartition(corlist,(3*de))[(len(corlist)-3*de):]
-        corlist = corlist[highcoco]
-        rmlist = rmlist[highcoco]
-        complist = complist[highcoco]
-        alist = alist[highcoco]
-        blist = blist[highcoco]
+        # highcoco = np.argpartition(corlist,(3*de))[(len(corlist)-3*de):]
+        # corlist = corlist[highcoco]
+        # rmlist = rmlist[highcoco]
+        # complist = complist[highcoco]
+        # alist = alist[highcoco]
+        # blist = blist[highcoco]
         sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist),key=lambda x:x[0], reverse=True)
         corlist, rmlist, complist, alist, blist = zip(*sorted_data)
         
@@ -154,7 +156,7 @@ class Toba:
         complist = complist[::2]
         alist = alist[::2]
         blist = blist[::2]
-        print(corlist[:30])
+        #print(corlist[:30])
         return corlist , rmlist , complist , alist , blist
 
     def epsilon_coco(self,out,epsilon):
@@ -193,7 +195,7 @@ class Toba:
             complist = complist[::2]
             alist = alist[::2]
             blist = blist[::2]
-            print(corlist[:30])
+
         else:
             corlist,rmlist,complist,alist,blist = [],[],[],[],[]
         return corlist , rmlist , complist , alist , blist

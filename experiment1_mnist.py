@@ -15,7 +15,7 @@ import openpyxl as pyxl
 import threading
 
 
-data_n = 2048
+data_n = 8192
 
 
 #x_train, t_train, x_test, t_test = load_cifar10(normalize=True, means=[0.5,0.5,0.5], stds=[0.5,0.5,0.5])
@@ -36,18 +36,18 @@ random_tmp = []
 coco_tmp = []
 fit_tmp = []
 
-# def input_quit():
-#     while True:
-#         user_input = input("type 'q' to quit")
-#         if user_input.lower() == 'q':
-#             global running
-#             running = False
-#             break
+def input_quit():
+    while True:
+        user_input = input("type 'q' to quit\n")
+        if user_input.lower() == 'q':
+            global running
+            running = False
+            break
 
 
-# running = True
-# input_quit = threading.Thread(target=input_quit)
-# input_quit.start()
+running = True
+input_quit = threading.Thread(target=input_quit)
+input_quit.start()
 
 
 i = 0
@@ -55,22 +55,22 @@ i = 0
 while True:
 
     network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
-    base = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
-    base.fit(10)
+    base = Trainer(network, optimizer=opt2, data=data, check=1, scheduler=exp)
+    base.fit(5)
     maxdel = [int(2048*0.5),int(512*0.5),int(256*0.5),int(128*0.5)]
-    base.coco_sort(maxdel,["Affine1","Affine2","Affine3","Affine4"])
+    base.coco_sort([2048,512,256,128],["Affine1","Affine2","Affine3","Affine4"])
     for delper in [0.0,0.1,0.2,0.3,0.4,0.5]:
         dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
 
         
-        random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine1","Affine2","Affine3","Affine4"],dels)
+        random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine2","Affine3","Affine4"],dels)
         random_tmp.append(random["acc"])
         
         cocotest = copy.deepcopy(base)
-        coco = cocotest.rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],dels)
+        coco = cocotest.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],dels)
         coco_tmp.append(coco["acc"])
         
-        fit_tmp.append(cocotest.fit(5))
+        fit_tmp.append(cocotest.fit(2))
     
     random_results.append(random_tmp)
     coco_results.append(coco_tmp)
@@ -83,19 +83,19 @@ while True:
     
 
 
-    # wb = pyxl.load_workbook('result1.xlsx')
-    # sheet = wb['Sheet1']
-    # for j in range(len(random_results[0])):
-    #     sheet.cell(row=j+2, column=i+4).value = random_results[-1][j]
+    wb = pyxl.load_workbook('leaky-result.xlsx')
+    sheet = wb['Sheet1']
+    for j in range(len(random_results[0])):
+        sheet.cell(row=j+2, column=i+4).value = random_results[-1][j]
 
-    #     sheet.cell(row=j+4+len(random_results[0]), column=i+4).value = coco_results[-1][j]
+        sheet.cell(row=j+4+len(random_results[0]), column=i+4).value = coco_results[-1][j]
 
-    #     sheet.cell(row=j+6+2*len(random_results[0]), column=i+4).value = fit_results[-1][j]
+        sheet.cell(row=j+6+2*len(random_results[0]), column=i+4).value = fit_results[-1][j]
 
 
-    # wb.save('result1.xlsx')
-    # wb.close()
-    # print("saved")
+    wb.save('leaky-result.xlsx')
+    wb.close()
+    print("saved")
     i += 1
     random_tmp = []
     coco_tmp = []

@@ -26,10 +26,10 @@ class Trainer:
         self.tobaclass = Toba(self.model,self.x_test, self.t_test)
         
     def fit(self,epoch):
-        print("start")
-        acc=self.optimizer.fit(self.data,self.batch_size,epoch,self.check)
-        print("finish")
-        return float(acc)
+        print("start fitting")
+        acc,loss=self.optimizer.fit(self.data,self.batch_size,epoch,self.check)
+        print("finish fitting")
+        return float(acc),float(loss)
 
     def coco_sort(self,delete_n,rmw_layer): self.tobaclass.coco_sort(delete_n,rmw_layer)
     def epsilon_coco_sort(self,epsilon,rmw_layer): self.tobaclass.epsilon_coco_sort(rmw_layer,epsilon)
@@ -38,7 +38,7 @@ class Trainer:
     def rmw_fit(self,tobatype,rmw_layer, delete_n, epsilon=None):
         print("start",tobatype,":",rmw_layer,"------------------------------------------")
         acc1 = self.model.accuracy(self.x_test,self.t_test)
-        print("    accuracy before Toba_W :", str(acc1))
+        print("    accuracy before Toba_W :", str(acc1),"loss :",self.model.cal_loss(self.x_test,self.t_test))
         if tobatype == "coco_toba":
             params = self.tobaclass.coco_pick(delete_n,epsilon)
         else:
@@ -50,9 +50,12 @@ class Trainer:
             tmp = np.append(tmp,self.model.params["b"+str(i)].shape)
         print("    Structure of Network :",tmp)
         acc2 = self.model.accuracy(self.x_test,self.t_test)
-        print("    accuracy after rmw :",str(acc2))
+        loss2 = self.model.cal_loss(self.x_test,self.t_test)
+        print("    accuracy after rmw :",str(acc2),"loss :",loss2)
+        x = self.model.predict(self.x_test,self.t_test,training=False)
+        print(self.model.last_layer.softmax(x))
         print("finish Toba_W ------------------------------------------")
-        return {"dacc":float(acc2-acc1),"acc":float(acc2)}
+        return float(acc2),float(loss2)
     
 """   
     def toba_w(self):
@@ -155,7 +158,7 @@ class Optimizer():
                 print("epoch:",str(i+1)," |  accuracy:"+str(acc),"loss:"+str(loss))
                 print("traindata  |  accuracy:"+str(self.model.accuracy(x_batch,t_batch)),"loss:"+str(self.model.cal_loss(x_batch,t_batch)))
                 print("---------------------------------------------------------------")
-        return self.model.accuracy(x_test,t_test)
+        return self.model.accuracy(x_test,t_test), self.model.cal_loss(x_test,t_test)
         
 class Scheduler():
     """

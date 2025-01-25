@@ -11,7 +11,7 @@ from model import *
 from trainer import *
 from params_init import *
 
-data_n = 16384
+data_n = 8192
 
 
 #x_train, t_train, x_test, t_test = load_cifar10(normalize=True, means=[0.5,0.5,0.5], stds=[0.5,0.5,0.5])
@@ -27,8 +27,11 @@ exp = {"method":"exp", "base":0.92}
 network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0,0], regularize=["l2",0.0005])
 test = Trainer(network, optimizer=opt2, data=data, check=1, scheduler=exp)
 test.fit(3)
+prev = copy.deepcopy(test)
 
-test.epsilon_coco_sort([0.5,0.5,0.5,0.5],["Affine2","Affine3","Affine4"])
+
+test.coco_sort([2048,512,256,128],["Affine2","Affine3","Affine4"])
 test.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],[400,100,50,25],[0.0,0.0,0.0,0.0])
-
+prev.prev_coco_sort(["Affine2","Affine3","Affine4"])
+prev.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],[400,100,50,25])
 
