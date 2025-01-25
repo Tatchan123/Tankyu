@@ -43,12 +43,12 @@ input_quit.start()
 
 
 
-i=0
+i = 4
 
 
 while running:
     result = []
-    network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0,0], regularize=["l2",0.0005])
+    network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     test = Trainer(network, optimizer=opt2, data=data, check=1, scheduler=exp)
     test.fit(10)
 

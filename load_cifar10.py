@@ -21,7 +21,7 @@ def change_one_hot_lebel(X):
     
     return T
 
-def load_cifar10(normalize=False,means=None,stds=None):
+def load_cifar10(one_hot=False,normalize=False,means=None,stds=None):
     print("cifar-10 dataset loading...")
 
     fname = os.path.join("./data_cifar10/test_batch")
@@ -30,7 +30,8 @@ def load_cifar10(normalize=False,means=None,stds=None):
     if Use_Gpu:
         x_test = np.asarray(x_test)
     t_test = test_dict['labels']
-    t_test = change_one_hot_lebel(t_test)
+    if one_hot:
+        t_test = change_one_hot_lebel(t_test)
     
 
 
@@ -40,12 +41,16 @@ def load_cifar10(normalize=False,means=None,stds=None):
         # バッチサイズをいじれるように最初は全部くっつけとく
         if idx == 1:
             x_train = train_dict['data'].reshape(10000,3,32,32)
-            t = train_dict['labels']
-            t_train = change_one_hot_lebel(t)
+            t_train = train_dict['labels']
+            if one_hot:
+                t_train = change_one_hot_lebel(t)
         else:
             x_train = np.append(x_train, train_dict['data'].reshape(10000,3,32,32),axis=0)
             t = train_dict['labels']
-            t_train = np.append(t_train,change_one_hot_lebel(t),axis=0)
+            if one_hot:
+                t_train = np.append(t_train,change_one_hot_lebel(t),axis=0)
+            else:
+                t_train = np.append(t_train,t,axis=0)
     
 
     if normalize:

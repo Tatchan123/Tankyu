@@ -31,7 +31,7 @@ class Trainer:
         print("finish fitting")
         return float(acc),float(loss)
 
-    def coco_sort(self,delete_n,rmw_layer): self.tobaclass.coco_sort(delete_n,rmw_layer)
+    def coco_sort(self,delete_n,rmw_layer): return self.tobaclass.coco_sort(delete_n,rmw_layer)
     def epsilon_coco_sort(self,epsilon,rmw_layer): self.tobaclass.epsilon_coco_sort(rmw_layer,epsilon)
     def prev_coco_sort(self,rmw_layer): self.tobaclass.prev_coco_sort(rmw_layer)
     
@@ -52,8 +52,6 @@ class Trainer:
         acc2 = self.model.accuracy(self.x_test,self.t_test)
         loss2 = self.model.cal_loss(self.x_test,self.t_test)
         print("    accuracy after rmw :",str(acc2),"loss :",loss2)
-        x = self.model.predict(self.x_test,self.t_test,training=False)
-        print(self.model.last_layer.softmax(x))
         print("finish Toba_W ------------------------------------------")
         return float(acc2),float(loss2)
     

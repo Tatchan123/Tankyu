@@ -55,11 +55,15 @@ class Toba:
         print("start  sorting")
         self.rmw_layer = rmw_layer
         self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
+        correturn = {}
         for layer in self.rmw_layer:
             x = self.half_predict(layer)
             de = delete_n[int(layer[-1])-1]
             self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.coco(x,de)
             print("  ",layer,"done")
+            correturn[layer] = [np.array(i).tolist() for i in self.corlist[layer]] #self.corlistはただの配列ではないので変換
+            
+        return correturn
 
     def coco_pick(self,delete_n,epsilon):
         all_rmlist  , all_scalar, all_bias = {},{},{}
@@ -140,12 +144,12 @@ class Toba:
         complist = complist.ravel()
         alist = a_matrix.ravel()
         blist = b_matrix.ravel()
-        # highcoco = np.argpartition(corlist,(3*de))[(len(corlist)-3*de):]
-        # corlist = corlist[highcoco]
-        # rmlist = rmlist[highcoco]
-        # complist = complist[highcoco]
-        # alist = alist[highcoco]
-        # blist = blist[highcoco]
+        highcoco = np.argpartition(corlist,(2*de))[(len(corlist)-2*de):]
+        corlist = corlist[highcoco]
+        rmlist = rmlist[highcoco]
+        complist = complist[highcoco]
+        alist = alist[highcoco]
+        blist = blist[highcoco]
         sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist),key=lambda x:x[0], reverse=True)
         corlist, rmlist, complist, alist, blist = zip(*sorted_data)
         
