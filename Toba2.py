@@ -131,7 +131,15 @@ class Toba:
         complist,rmlist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
         means = np.mean(out,axis=1)
         sxy = np.cov(out)
+        
         cor_matrix = abs(np.corrcoef(out))
+
+        del out
+        if gpu.Use_Gpu:
+            np.cuda.Device(0).synchronize()
+            np.get_default_memory_pool().free_all_blocks()
+
+            
         a_matrix = np.zeros_like(sxy,dtype=float)
         b_matrix = np.zeros_like(sxy,dtype=float)
         for j in range(cor_matrix.shape[1]):
@@ -144,6 +152,11 @@ class Toba:
         complist = complist.ravel()
         alist = a_matrix.ravel()
         blist = b_matrix.ravel()
+        del cor_matrix,a_matrix,b_matrix
+        if gpu.Use_Gpu:
+            np.cuda.Device(0).synchronize()
+            np.get_default_memory_pool().free_all_blocks()
+
         highcoco = np.argpartition(corlist,(2*de))[(len(corlist)-2*de):]
         corlist = corlist[highcoco]
         rmlist = rmlist[highcoco]

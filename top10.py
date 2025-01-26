@@ -50,22 +50,28 @@ while running:
     No_train = Trainer(No, optimizer=opt2, data=data, check=10, scheduler=exp)
     No_train.fit(10)
     DropReg_result.append(No_train.coco_sort([10,10,10,10],["Affine1","Affine2","Affine3","Affine4"]))
+    del No,No_train
+
 
     Drop = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True,drop_rate=[0.26,0.33])
     Drop_train = Trainer(Drop, optimizer=opt2, data=data, check=10, scheduler=exp)
     Drop_train.fit(10)
     DropReg_result.append(Drop_train.coco_sort([10,10,10,10],["Affine1","Affine2","Affine3","Affine4"]))
+    del Drop,Drop_train
     
 
     Reg = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True,regularize=["l2",0.0005])
     Reg_train = Trainer(Reg, optimizer=opt2, data=data, check=10, scheduler=exp)
     Reg_train.fit(10)
     DropReg_result.append(Reg_train.coco_sort([10,10,10,10],["Affine1","Affine2","Affine3","Affine4"]))
+    del Reg,Reg_train
+
 
     DropReg = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     DropReg_train = Trainer(DropReg, optimizer=opt2, data=data, check=10, scheduler=exp)
     DropReg_train.fit(10)
     DropReg_result.append(DropReg_train.coco_sort([10,10,10,10],["Affine1","Affine2","Affine3","Affine4"]))
+    del DropReg,DropReg_train
 
     wb = pyxl.load_workbook('top10.xlsx')
 
@@ -82,27 +88,7 @@ while running:
     wb.close()
     DropReg_result = []
 
-    print("Node")
-    node_result = []
-    for mrg in [0.25,0.5,1,2,4]:
-        network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=[int(n*mrg) for n in layer1], conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
-        test = Trainer(network, optimizer=opt2, data=data, check=10, scheduler=exp)
-        test.fit(10)
-        node_result.append(test.coco_sort([10,10,10,10],["Affine1","Affine2","Affine3","Affine4"]))
-
-    wb = pyxl.load_workbook('top10.xlsx')
-    node_sheet = wb['Node']
-
-    for j in range(5):
-        for k in range(10):
-            node_sheet.cell(j*6+2,k+i*11+4).value = node_result[j]["Affine1"][k]
-            node_sheet.cell(j*6+3,k+i*11+4).value = node_result[j]["Affine2"][k]
-            node_sheet.cell(j*6+4,k+i*11+4).value = node_result[j]["Affine3"][k]
-            node_sheet.cell(j*6+5,k+i*11+4).value = node_result[j]["Affine4"][k]
-        
-    wb.save('top10.xlsx')
-    wb.close()
-    node_result = []
+    
     print("Optimizer")
     opt_result = []
     opt1 = {"opt":"sgd","lr":0.02,"batch_size":64}
