@@ -50,7 +50,7 @@ input_quit = threading.Thread(target=input_quit)
 input_quit.start()
 
 
-i = 4
+i = 0
 
 while True:
 

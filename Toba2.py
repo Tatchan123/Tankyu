@@ -138,6 +138,11 @@ class Toba:
         sxy = np.cov(out)
         
         cor_matrix = abs(np.corrcoef(out))
+        for i in range(cor_matrix.shape[0]):
+            if sxy[i,i] == 0:
+                zerovar = np.nonzero(np.isnan(cor_matrix[i]))
+                cor_matrix[i][zerovar] = 1.
+
         np.nan_to_num(cor_matrix,copy=False)
         
         del out
@@ -146,11 +151,7 @@ class Toba:
             gc.collect()
             np.get_default_memory_pool().free_all_blocks()
 
-        for i in range(cor_matrix.shape[0]):
-            if cor_matrix[i,i] == 0:
-                zerovar = (cor_matrix[i] == 0)
-                cor_matrix[i][zerovar] = 1.
-
+        
 
         a_matrix = np.zeros_like(sxy,dtype=float)
         b_matrix = np.zeros_like(sxy,dtype=float)
