@@ -31,7 +31,7 @@ class Convnetwork:
         
             
         #レイヤ初期化
-        self.activation = activation
+        self.activation = activation[0]
         self.layers = OrderedDict()
         cc = 1
         pc = 1
@@ -44,7 +44,7 @@ class Convnetwork:
                     self.layers["BatchNorm"+str(cc)] = BatchNormalize(cc)
                 if drop_rate[0] != 0:
                     self.layers["ConvDrop"+str(cc)] = Dropout(drop_rate[0])
-                self.layers["ConvActivation"+str(cc)] = self.activation(0.01)
+                self.layers["ConvActivation"+str(cc)] = self.activation(activation[1])
                 
                 cc += 1
             elif len(self.conv_layer[idx-1]) == 1:    
@@ -61,7 +61,7 @@ class Convnetwork:
             self.layers["Affine"+str(idx)] = Affine(idx)
             if drop_rate[1] != 0:
                 self.layers["Dropout"+str(idx)] = Dropout(drop_rate[1])
-            self.layers["Activation"+str(idx)] = self.activation(0.01)
+            self.layers["Activation"+str(idx)] = self.activation(activation[1])
         
         idx = self.layer_n + 1        #最終層は上の層と同じくaffine,biasは持つが、reluではなく祖父とマックスなので別で
         self.layers["Affine"+str(idx)] = Affine(idx)

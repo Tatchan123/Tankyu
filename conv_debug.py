@@ -24,15 +24,18 @@ conv_layer1 = [[32,3,1],[2],[64,3,1],[2],[128,3,1],[2]]
 opt2 = {"opt":"adam", "dec1":0.9, "dec2":0.999,"lr":0.002,"batch_size":64}
 exp = {"method":"exp", "base":0.92}
 
-network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
-test = Trainer(network, optimizer=opt2, data=data, check=1, scheduler=exp)
-test.fit(8)
+network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=[LeakyRelu,0.], batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
+test = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
+test.fit(10)
 #prev = copy.deepcopy(test)
 
 
-test.epsilon_coco_sort([0.6,0.6,0.6,0.6],["Affine2","Affine3","Affine4"])
-test.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],[400,100,50,25],[0.0,0.0,0.0,0.0])
+test.prev_coco_sort(["Affine1","Affine2","Affine3","Affine4"])
+cov = test.tobaclass.cov
+cor = test.tobaclass.correturn
+
+# test.rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],[10,10,10,10])
 #prev.prev_coco_sort(["Affine2","Affine3","Affine4"])
 #prev.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],[400,100,50,25])
-test.fit(5)
+
 
