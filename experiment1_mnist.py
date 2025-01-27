@@ -50,24 +50,23 @@ input_quit = threading.Thread(target=input_quit)
 input_quit.start()
 
 
-i = 0
+i = 4
 
 while True:
 
-    network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=[LeakyRelu,0.01], batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
+    network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=[LeakyRelu,0.], batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     base = Trainer(network, optimizer=opt2, data=data, check=2, scheduler=exp)
     base.fit(10)
-    maxdel = [int(2048*0.5),int(512*0.5),int(256*0.5),int(128*0.5)]
     base.coco_sort([2048,512,256,128],["Affine1","Affine2","Affine3","Affine4"])
     for delper in [0.0,0.1,0.2,0.3,0.4,0.5]:
         dels = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
 
         
-        random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine2","Affine3","Affine4"],dels)
+        random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine1","Affine2","Affine3","Affine4"],dels)
         random_tmp.append(random[0])
         
         cocotest = copy.deepcopy(base)
-        coco = cocotest.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],dels)
+        coco = cocotest.rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],dels)
         coco_tmp.append(coco[0])
         
         fit_tmp.append(cocotest.fit(4)[0])

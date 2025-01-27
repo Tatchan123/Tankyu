@@ -74,7 +74,7 @@ class Toba:
             for cnt in range(len(self.rmlist[layer])):
                 if len(rmlist_s) >= delete_n[int(layer[-1])-1]:
                     break
-                elif self.corlist[layer][cnt] == 0.:
+                elif self.corlist[layer][cnt] == 0:
                     continue
 
                 elif self.rmlist[layer][cnt] not in rmlist_s and self.rmlist[layer][cnt] not in complist_s:
@@ -146,11 +146,16 @@ class Toba:
             gc.collect()
             np.get_default_memory_pool().free_all_blocks()
 
-            
+        for i in range(cor_matrix.shape[0]):
+            if cor_matrix[i,i] == 0:
+                zerovar = (cor_matrix[i] == 0)
+                cor_matrix[i][zerovar] = 1.
+
+
         a_matrix = np.zeros_like(sxy,dtype=float)
         b_matrix = np.zeros_like(sxy,dtype=float)
         for j in range(cor_matrix.shape[1]):
-            a_matrix[:,j] = sxy[:,j] / (sxy[j,j])
+            a_matrix[:,j] = sxy[:,j] / (sxy[j,j]+1e-12)
             b_matrix[:,j] = means - a_matrix[:,j] * means[j]
             cor_matrix[j,j] = 0.
         

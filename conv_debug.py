@@ -31,7 +31,7 @@ test.fit(10)
 
 
 test.coco_sort([256,64,32,16],["Affine1","Affine2","Affine3","Affine4"])
-test.rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],[20,20,20,20])
+test.rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],[256,64,32,16])
 
 # test.rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],[10,10,10,10])
 #prev.prev_coco_sort(["Affine2","Affine3","Affine4"])
