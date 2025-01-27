@@ -55,17 +55,16 @@ class Toba:
         print("start  sorting")
         self.rmw_layer = rmw_layer
         self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
-        sxy,self.cov = {},{}
         self.correturn = {}
         for layer in self.rmw_layer:
             x = self.half_predict(layer)
             de = delete_n[int(layer[-1])-1]
-            self.corlist[layer], sxy[layer],self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.coco(x,de)
+            self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.coco(x,de)
             print("  ",layer,"done")
             self.correturn[layer] = [np.array(i).tolist() for i in self.corlist[layer]] #self.corlistはただの配列ではないので変換
             
-        for k,c in self.correturn.items():
-            print(f"{k} : {c}")
+        # for k,c in self.correturn.items():
+        #     print(f"{k} : {c}")
         return self.correturn
 
     def coco_pick(self,delete_n,epsilon):
@@ -75,6 +74,9 @@ class Toba:
             for cnt in range(len(self.rmlist[layer])):
                 if len(rmlist_s) >= delete_n[int(layer[-1])-1]:
                     break
+                elif self.corlist[layer][cnt] == 0.:
+                    continue
+
                 elif self.rmlist[layer][cnt] not in rmlist_s and self.rmlist[layer][cnt] not in complist_s:
                     rmlist_s.append(self.rmlist[layer][cnt])
                     complist_s.append(self.complist[layer][cnt])
@@ -136,8 +138,7 @@ class Toba:
         sxy = np.cov(out)
         
         cor_matrix = abs(np.corrcoef(out))
-        mask = np.nonzero(np.isnan(cor_matrix))
-        print(sxy[mask])
+        np.nan_to_num(cor_matrix,copy=False)
         
         del out
         if gpu.Use_Gpu:
@@ -149,42 +150,39 @@ class Toba:
         a_matrix = np.zeros_like(sxy,dtype=float)
         b_matrix = np.zeros_like(sxy,dtype=float)
         for j in range(cor_matrix.shape[1]):
-            a_matrix[:,j] = sxy[:,j] / (sxy[j,j]+1e-8)
+            a_matrix[:,j] = sxy[:,j] / (sxy[j,j])
             b_matrix[:,j] = means - a_matrix[:,j] * means[j]
             cor_matrix[j,j] = 0.
-        same = np.arange(len(cor_matrix))[:30]
         
-        sxy = sxy.ravel()
+    
         corlist = cor_matrix.ravel()
         rmlist = rmlist.ravel()
         complist = complist.ravel()
         alist = a_matrix.ravel()
         blist = b_matrix.ravel()
-        del cor_matrix,a_matrix,b_matrix
+        del cor_matrix,a_matrix,b_matrix,sxy
         if gpu.Use_Gpu:
             np.cuda.Device(0).synchronize()
             np.get_default_memory_pool().free_all_blocks()
 
-        highcoco = np.argpartition(corlist,(2*de))[(len(corlist)-2*de):]
+        highcoco = np.argpartition(corlist,(3*de))[(len(corlist)-3*de):]
         corlist = corlist[highcoco]
         rmlist = rmlist[highcoco]
-        sxy = sxy[highcoco]
         complist = complist[highcoco]
         alist = alist[highcoco]
         blist = blist[highcoco]
-        sorted_data = sorted(zip(corlist,sxy,rmlist,complist,alist,blist),key=lambda x:x[0], reverse=True)
-        corlist,sxy, rmlist, complist, alist, blist = zip(*sorted_data)
+        sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist),key=lambda x:x[0], reverse=True)
+        corlist, rmlist, complist, alist, blist = zip(*sorted_data)
         
 
         #共分散行列の右上と左下が対称で値がかぶっているので、スライスで半分にする
         corlist = corlist[::2]
-        sxy = sxy[::2]
         rmlist = rmlist[::2]
         complist = complist[::2]
         alist = alist[::2]
         blist = blist[::2]
         #print(corlist[:30])
-        return corlist ,sxy,  rmlist , complist , alist , blist
+        return corlist , rmlist , complist , alist , blist
 
     def epsilon_coco(self,out,epsilon):
         corlist, alist, blist = [], [], []
@@ -196,7 +194,7 @@ class Toba:
         a_matrix = np.zeros_like(sxy,dtype=float)
         b_matrix = np.zeros_like(sxy,dtype=float)
         for j in range(cor_matrix.shape[1]):
-            a_matrix[j] = sxy[j] / (sxy[j,j]+1e-8)
+            a_matrix[j] = sxy[j] / (sxy[j,j])
             b_matrix[j] = means - a_matrix[j] * means[j]
             cor_matrix[j,j] = 0.
 
@@ -238,8 +236,7 @@ class Toba:
                 vari = np.var(i_val)
                 varj = np.var(j_val)
                 cor = sxy / (np.sqrt(vari * varj))
-                if np.isnan(cor):
-                    print(sxy)
+
                 a = sxy / (varj + 1e-8)
                 b = np.mean(i_val) - a * np.mean(j_val)
     

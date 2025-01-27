@@ -54,9 +54,9 @@ i = 0
 
 while True:
 
-    network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=LeakyRelu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
-    base = Trainer(network, optimizer=opt2, data=data, check=1, scheduler=exp)
-    base.fit(5)
+    network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=[LeakyRelu,0.01], batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
+    base = Trainer(network, optimizer=opt2, data=data, check=2, scheduler=exp)
+    base.fit(10)
     maxdel = [int(2048*0.5),int(512*0.5),int(256*0.5),int(128*0.5)]
     base.coco_sort([2048,512,256,128],["Affine1","Affine2","Affine3","Affine4"])
     for delper in [0.0,0.1,0.2,0.3,0.4,0.5]:
@@ -64,13 +64,13 @@ while True:
 
         
         random = copy.deepcopy(base).rmw_fit("random_rmw",["Affine2","Affine3","Affine4"],dels)
-        random_tmp.append(random["acc"])
+        random_tmp.append(random[0])
         
         cocotest = copy.deepcopy(base)
         coco = cocotest.rmw_fit("coco_toba",["Affine2","Affine3","Affine4"],dels)
-        coco_tmp.append(coco["acc"])
+        coco_tmp.append(coco[0])
         
-        fit_tmp.append(cocotest.fit(2))
+        fit_tmp.append(cocotest.fit(4)[0])
     
     random_results.append(random_tmp)
     coco_results.append(coco_tmp)
@@ -83,7 +83,7 @@ while True:
     
 
 
-    wb = pyxl.load_workbook('leaky-result.xlsx')
+    wb = pyxl.load_workbook('mnist-result.xlsx')
     sheet = wb['Sheet1']
     for j in range(len(random_results[0])):
         sheet.cell(row=j+2, column=i+4).value = random_results[-1][j]
@@ -93,7 +93,7 @@ while True:
         sheet.cell(row=j+6+2*len(random_results[0]), column=i+4).value = fit_results[-1][j]
 
 
-    wb.save('leaky-result.xlsx')
+    wb.save('mnist-result.xlsx')
     wb.close()
     print("saved")
     i += 1
