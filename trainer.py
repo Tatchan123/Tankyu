@@ -31,8 +31,7 @@ class Trainer:
         print("finish fitting")
         return float(acc),float(loss)
 
-    def coco_sort(self,delete_n,rmw_layer): return self.tobaclass.coco_sort(delete_n,rmw_layer)
-    def epsilon_coco_sort(self,epsilon,rmw_layer): self.tobaclass.epsilon_coco_sort(rmw_layer,epsilon)
+    def coco_sort(self,rmw_layer): self.tobaclass.coco_sort(rmw_layer)
     def prev_coco_sort(self,rmw_layer): self.tobaclass.prev_coco_sort(rmw_layer)
     
     def rmw_fit(self,tobatype,rmw_layer, delete_n, epsilon=None):

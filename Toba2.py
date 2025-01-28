@@ -40,32 +40,21 @@ class Toba:
             self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.prev_coco(x)
             print("  ",layer,"done")
 
-    def epsilon_coco_sort(self,rmw_layer,epsilon):
-        self.params = copy.deepcopy(self.model.params)
-        self.rmw_layer = rmw_layer
-        self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
-        for layer in self.rmw_layer:
-            x = self.half_predict(layer)
-            eps = epsilon[int(layer[-1])-1]
-            self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.epsilon_coco(x,eps)
-            print("  ",layer,"done")
-
-    def coco_sort(self,delete_n,rmw_layer):
+    def coco_sort(self,rmw_layer):
         self.params = copy.deepcopy(self.model.params)
         print("start  sorting")
         self.rmw_layer = rmw_layer
         self.corlist, self.rmlist, self.complist, self.alist, self.blist = {},{},{},{},{}
-        self.correturn = {}
+        
         for layer in self.rmw_layer:
             x = self.half_predict(layer)
-            de = delete_n[int(layer[-1])-1]
-            self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.coco(x,de)
+            self.corlist[layer], self.rmlist[layer], self.complist[layer], self.alist[layer], self.blist[layer] = self.coco(x)
             print("  ",layer,"done")
-            self.correturn[layer] = [np.array(i).tolist() for i in self.corlist[layer]] #self.corlistはただの配列ではないので変換
+            
             
         # for k,c in self.correturn.items():
         #     print(f"{k} : {c}")
-        return self.correturn
+        
 
     def coco_pick(self,delete_n,epsilon):
         all_rmlist  , all_scalar, all_bias = {},{},{}
@@ -117,7 +106,7 @@ class Toba:
             
     def half_predict(self, stop_layer):
         batch_x = self.model.predict(self.x,self.t,False,stop_layer)
-        
+        zeronode = np.count_nonzero(np.all(batch_x == 0, axis=0)) / batch_x.shape[0]
         idx = stop_layer[-1]
         out = []
         for i in batch_x:            
@@ -129,7 +118,7 @@ class Toba:
         
         return out
     
-    def coco(self, out, de):
+    def coco(self, out):
         
         corlist, alist, blist = [], [], []
         
@@ -138,12 +127,16 @@ class Toba:
         sxy = np.cov(out)
         
         cor_matrix = abs(np.corrcoef(out))
+        used = np.zeros(cor_matrix.shape[0])
         for i in range(cor_matrix.shape[0]):
+            used[i] = 1
             if sxy[i,i] == 0:
-                zerovar = np.nonzero(np.isnan(cor_matrix[i]))
-                cor_matrix[i][zerovar] = 1.
+                idx = np.where(used==0)[0]
+                cor_matrix[i][idx] = 1.
+                used[idx] = 1
 
         np.nan_to_num(cor_matrix,copy=False)
+        cor_matrix = np.triu(cor_matrix, k=1)
         
         del out
         if gpu.Use_Gpu:
@@ -158,7 +151,6 @@ class Toba:
         for j in range(cor_matrix.shape[1]):
             a_matrix[:,j] = sxy[:,j] / (sxy[j,j]+1e-12)
             b_matrix[:,j] = means - a_matrix[:,j] * means[j]
-            cor_matrix[j,j] = 0.
         
     
         corlist = cor_matrix.ravel()
@@ -170,66 +162,23 @@ class Toba:
         if gpu.Use_Gpu:
             np.cuda.Device(0).synchronize()
             np.get_default_memory_pool().free_all_blocks()
+        nozero = (corlist != 0)
+        corlist = corlist[nozero]
+        rmlist = rmlist[nozero]
+        complist = complist[nozero]
+        alist = alist[nozero]
+        blist = blist[nozero]
+        order = np.argsort(corlist)
+        corlist = corlist[order]
+        rmlist = rmlist[order]
+        complist = complist[order]
+        alist = alist[order]
+        blist = blist[order]        
 
-        highcoco = np.argpartition(corlist,(3*de))[(len(corlist)-3*de):]
-        corlist = corlist[highcoco]
-        rmlist = rmlist[highcoco]
-        complist = complist[highcoco]
-        alist = alist[highcoco]
-        blist = blist[highcoco]
-        sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist),key=lambda x:x[0], reverse=True)
-        corlist, rmlist, complist, alist, blist = zip(*sorted_data)
-        
-
-        #共分散行列の右上と左下が対称で値がかぶっているので、スライスで半分にする
-        corlist = corlist[::2]
-        rmlist = rmlist[::2]
-        complist = complist[::2]
-        alist = alist[::2]
-        blist = blist[::2]
         #print(corlist[:30])
         return corlist , rmlist , complist , alist , blist
 
-    def epsilon_coco(self,out,epsilon):
-        corlist, alist, blist = [], [], []
-        
-        rmlist,complist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
-        means = np.mean(out,axis=1)
-        sxy = np.cov(out)
-        cor_matrix = abs(np.corrcoef(out))
-        a_matrix = np.zeros_like(sxy,dtype=float)
-        b_matrix = np.zeros_like(sxy,dtype=float)
-        for j in range(cor_matrix.shape[1]):
-            a_matrix[j] = sxy[j] / (sxy[j,j])
-            b_matrix[j] = means - a_matrix[j] * means[j]
-            cor_matrix[j,j] = 0.
 
-        corlist = cor_matrix.ravel()
-        rmlist = rmlist.ravel()
-        complist = complist.ravel()
-        alist = a_matrix.ravel()
-        blist = b_matrix.ravel()
-        highcoco = (corlist >= epsilon)
-        corlist = corlist[highcoco]
-        rmlist = rmlist[highcoco]
-        complist = complist[highcoco]
-        alist = alist[highcoco]
-        blist = blist[highcoco]
-        if len(rmlist) != 0:
-            sorted_data = sorted(zip(corlist,rmlist,complist,alist,blist),key=lambda x:x[0], reverse=True)
-            corlist, rmlist, complist, alist, blist = zip(*sorted_data)
-        
-
-            #共分散行列の右上と左下が対称で値がかぶっているので、スライスで半分にする
-            corlist = corlist[::2]
-            rmlist = rmlist[::2]
-            complist = complist[::2]
-            alist = alist[::2]
-            blist = blist[::2]
-
-        else:
-            corlist,rmlist,complist,alist,blist = [],[],[],[],[]
-        return corlist , rmlist , complist , alist , blist
 
 
     def prev_coco(self,out):
