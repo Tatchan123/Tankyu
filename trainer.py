@@ -40,6 +40,8 @@ class Trainer:
         print("    accuracy before Toba_W :", str(acc1),"loss :",self.model.cal_loss(self.x_test,self.t_test))
         if tobatype == "coco_toba":
             params = self.tobaclass.coco_pick(delete_n,epsilon)
+        elif tobatype == "nozero_toba":
+            params = self.tobaclass.nozero_random_toba(rmw_layer,delete_n)
         else:
             params = self.tobaclass.random_toba(rmw_layer, delete_n)
         self.model.updateparams(params)

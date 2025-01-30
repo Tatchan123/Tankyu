@@ -30,6 +30,25 @@ class Toba:
         self.apply(rmlist,scalar,bias)
         return self.params
     
+    def nozero_random_toba(self,rmw_layer,delete_n):
+        self.params = copy.deepcopy(self.model.params)
+        self.rmw_layer = rmw_layer
+        rmlist = {}
+        scalar = {}
+        bias = {}
+        for layer in rmw_layer:
+            idx = int(layer[-1])
+            batch_x = self.model.predict(self.x,self.t,False,layer)
+            notzero = np.where(np.any(batch_x != 0,axis=0))[0]
+            
+            
+            rmlist[layer] = np.random.choice(notzero,delete_n[idx-1],replace=False)
+            
+            scalar[layer] = np.ones(len(self.params["W"+str(idx)]))
+            bias[layer] = 0
+        self.apply(rmlist,scalar,bias)
+        return self.params
+    
     def prev_coco_sort(self,rmw_layer):
         self.params = copy.deepcopy(self.model.params)
         print("start sorting")
