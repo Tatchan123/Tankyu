@@ -141,18 +141,18 @@ class Toba:
         
         corlist, alist, blist = [], [], []
         
-        complist,rmlist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
+        rmlist,complist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
         means = np.mean(out,axis=1)
         sxy = np.cov(out)
         
         cor_matrix = abs(np.corrcoef(out))
-        used = np.zeros(cor_matrix.shape[0])
+        used = np.ones(cor_matrix.shape[0])
         for i in range(cor_matrix.shape[0]):
-            used[i] = 1
+            used[i] = 0
             if sxy[i,i] == 0:
-                idx = np.where(used==0)[0]
+                idx = np.nonzero(used)[0]
                 cor_matrix[i][idx] = 1.
-                used[idx] = 1
+                used[idx] = 0
 
         np.nan_to_num(cor_matrix,copy=False)
         cor_matrix = np.triu(cor_matrix, k=1)
