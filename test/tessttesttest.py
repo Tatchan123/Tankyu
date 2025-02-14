@@ -1,4 +1,5 @@
 import numpy as np
 
 
-for i,j in enumerate([1,3,5]):print(i,j)
+x, y = np.meshgrid(np.arange(5),np.arange(5))
+print(x,y)

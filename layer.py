@@ -324,7 +324,7 @@ class SoftmaxLoss:
                     continue
                 else:
                     regular_term = np.sum(np.abs(prm))
-            self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
+            self.loss = self.cross_entropy_error(self.y, self.t) #+ self.regularize[1] * regular_term
 
         elif self.regularize[0] == "l2": #L2正則化
             regular_term = 0
@@ -333,7 +333,7 @@ class SoftmaxLoss:
                     continue
                 else:
                     regular_term += np.sum(prm ** 2)
-            self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
+            self.loss = self.cross_entropy_error(self.y, self.t) #+ self.regularize[1] * regular_term
         
         return self.loss
 

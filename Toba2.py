@@ -141,7 +141,7 @@ class Toba:
         
         corlist, alist, blist = [], [], []
         
-        rmlist,complist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
+        complist,rmlist = np.meshgrid(np.arange(len(out)),np.arange(len(out)))
         means = np.mean(out,axis=1)
         sxy = np.cov(out)
         
@@ -187,14 +187,13 @@ class Toba:
         complist = complist[nozero]
         alist = alist[nozero]
         blist = blist[nozero]
-        order = np.argsort(corlist)
+        order = np.argsort(-corlist)
         corlist = corlist[order]
         rmlist = rmlist[order]
         complist = complist[order]
         alist = alist[order]
         blist = blist[order]        
-
-        #print(corlist[:30])
+        print(corlist[:30])
         return corlist , rmlist , complist , alist , blist
 
 

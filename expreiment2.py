@@ -34,7 +34,7 @@ while True:
     model = test = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
     model.fit(10)
     model.coco_sort(["Affine1","Affine2","Affine3","Affine4"])
-    for delper in [0.0,0.1,0.2,0.3]:
+    for delper in [0.0,0.1,0.2,0.3,0.4,0.5]:
         
         copy.deepcopy(model).rmw_fit("coco_toba",["Affine1","Affine2","Affine3","Affine4"],[int(2048*delper),int(512*delper),int(256*delper),int(128*delper)])
 
