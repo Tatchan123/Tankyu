@@ -1,8 +1,5 @@
-class Tekito:
-    def __init__ (self,n):
-        self.s = n
-    def b(self,g):
-        self.s= self.s+g
-    def p(self):
-        return self.s
 
+
+a = [0,1,2,3,4]
+b = [5,6,7,8]
+print(a + b)

@@ -42,8 +42,13 @@ class Toba:
             notzero = np.where(np.any(batch_x != 0,axis=0))[0]
             
             
-            rmlist[layer] = np.random.choice(notzero,delete_n[idx-1],replace=False)
-            
+            try:
+                rmlist[layer] = np.random.choice(notzero,delete_n[idx-1],replace=False)
+            except:
+                zero = list(set(list(range((batch_x.shape[1])))) - set(notzero.tolist()))
+                temp = np.random.choice(zero,delete_n[idx-1]-len(notzero))
+                rmlist[layer] = np.concatenate((notzero,temp))
+
             scalar[layer] = np.ones(len(self.params["W"+str(idx)]))
             bias[layer] = 0
         self.apply(rmlist,scalar,bias)
@@ -75,15 +80,16 @@ class Toba:
         #     print(f"{k} : {c}")
         
 
-    def coco_pick(self,delete_n,epsilon):
+    def coco_pick(self,delete_n):
         all_rmlist  , all_scalar, all_bias = {},{},{}
         for layer in self.rmw_layer:
             rmlist_s, complist_s, alist_s, blist_s = [], [], [], []
             for cnt in range(len(self.rmlist[layer])):
                 if len(rmlist_s) >= delete_n[int(layer[-1])-1]:
                     break
-                elif self.corlist[layer][cnt] == 0:
-                    continue
+
+                elif self.corlist[layer][cnt] == 1.:
+                    np.append(self.corlist[layer],self.corlist[layer][cnt])
 
                 elif self.rmlist[layer][cnt] not in rmlist_s and self.rmlist[layer][cnt] not in complist_s:
                     rmlist_s.append(self.rmlist[layer][cnt])
@@ -102,7 +108,31 @@ class Toba:
         self.apply(all_rmlist,all_scalar,all_bias)
         return self.params
 
+    def zero_include_coco_pick(self,delete_n):
+        all_rmlist  , all_scalar, all_bias = {},{},{}
+        for layer in self.rmw_layer:
+            rmlist_s, complist_s, alist_s, blist_s = [], [], [], []
+            for cnt in range(len(self.rmlist[layer])):
+                if len(rmlist_s) >= delete_n[int(layer[-1])-1]:
+                    break
 
+                elif self.rmlist[layer][cnt] not in rmlist_s and self.rmlist[layer][cnt] not in complist_s:
+                    rmlist_s.append(self.rmlist[layer][cnt])
+                    complist_s.append(self.complist[layer][cnt])
+                    alist_s.append(self.alist[layer][cnt])
+                    blist_s.append(self.blist[layer][cnt])
+            alist_s, blist_s = np.array(alist_s), np.array(blist_s)
+            scalar = np.ones(len(self.params["W"+(layer[-1])]))
+            scalar[complist_s] += alist_s
+            bias = np.zeros_like(self.params["b"+(layer[-1])])
+            bias += np.sum(blist_s)
+            
+            all_rmlist[layer] = rmlist_s
+            all_scalar[layer] = scalar
+            all_bias[layer] = bias
+        self.apply(all_rmlist,all_scalar,all_bias)
+        return self.params
+    
     def apply(self, all_rmlist, all_scalar, all_bias):
         for layer in self.rmw_layer:
             idx = int(layer[-1])
@@ -146,13 +176,10 @@ class Toba:
         sxy = np.cov(out)
         
         cor_matrix = abs(np.corrcoef(out))
-        used = np.ones(cor_matrix.shape[0])
         for i in range(cor_matrix.shape[0]):
-            used[i] = 0
             if sxy[i,i] == 0:
-                idx = np.nonzero(used)[0]
-                cor_matrix[i][idx] = 1.
-                used[idx] = 0
+                
+                cor_matrix[i][len(cor_matrix)-1] = 1.
 
         np.nan_to_num(cor_matrix,copy=False)
         cor_matrix = np.triu(cor_matrix, k=1)

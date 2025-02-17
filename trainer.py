@@ -39,11 +39,15 @@ class Trainer:
         acc1 = self.model.accuracy(self.x_test,self.t_test)
         print("    accuracy before Toba_W :", str(acc1),"loss :",self.model.cal_loss(self.x_test,self.t_test))
         if tobatype == "coco_toba":
-            params = self.tobaclass.coco_pick(delete_n,epsilon)
+            params = self.tobaclass.coco_pick(delete_n)
         elif tobatype == "nozero_toba":
             params = self.tobaclass.nozero_random_toba(rmw_layer,delete_n)
-        else:
+        elif tobatype == "zero_coco":
+            params = self.tobaclass.zero_include_coco_pick(delete_n)
+        elif tobatype == "random_toba":
             params = self.tobaclass.random_toba(rmw_layer, delete_n)
+        else:
+            print("No such a tobatype!")
         self.model.updateparams(params)
         
         tmp = [params["W1"].shape[0]]

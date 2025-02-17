@@ -313,27 +313,28 @@ class SoftmaxLoss:
     def forward(self, x, t, params):
         self.t = t
         self.y = self.softmax(x)
-        if self.regularize is None:
-            self.loss = self.cross_entropy_error(self.y, self.t)
+        self.loss = self.cross_entropy_error(self.y,self.t)
+        # if self.regularize is None:
+        #     self.loss = self.cross_entropy_error(self.y, self.t)
 
-        elif self.regularize[0] == "l1": #L1正則化
-            regular_term = 0
-            for key,prm in params.items():
-                if "move" in key:
+        # elif self.regularize[0] == "l1": #L1正則化
+        #     regular_term = 0
+        #     for key,prm in params.items():
+        #         if "move" in key:
 
-                    continue
-                else:
-                    regular_term = np.sum(np.abs(prm))
-            self.loss = self.cross_entropy_error(self.y, self.t) #+ self.regularize[1] * regular_term
+        #             continue
+        #         else:
+        #             regular_term = np.sum(np.abs(prm))
+        #     self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
 
-        elif self.regularize[0] == "l2": #L2正則化
-            regular_term = 0
-            for key,prm in params.items():
-                if "move" in key:
-                    continue
-                else:
-                    regular_term += np.sum(prm ** 2)
-            self.loss = self.cross_entropy_error(self.y, self.t) #+ self.regularize[1] * regular_term
+        # elif self.regularize[0] == "l2": #L2正則化
+        #     regular_term = 0
+        #     for key,prm in params.items():
+        #         if "move" in key:
+        #             continue
+        #         else:
+        #             regular_term += np.sum(prm ** 2)
+        #     self.loss = self.cross_entropy_error(self.y, self.t) + self.regularize[1] * regular_term
         
         return self.loss
 
