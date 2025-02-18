@@ -1,5 +1,5 @@
 
-import pickle as cPickle
+import pickle
 from collections import OrderedDict
 from gpu import *
 if Use_Gpu:
@@ -11,7 +11,7 @@ import os
 
 def unpickle(file):
     with open(file, 'rb') as fo:
-        dict = cPickle.load(fo, encoding='latin1')
+        dict = pickle.load(fo, encoding='latin1')
     return dict
 
 def change_one_hot_lebel(X):
@@ -29,7 +29,7 @@ def load_cifar10(one_hot=False,normalize=False,means=None,stds=None):
     x_test = test_dict['data'].reshape(10000,3,32,32)
     if Use_Gpu:
         x_test = np.asarray(x_test)
-    t_test = test_dict['labels']
+    t_test = np.asarray(test_dict['labels'])
     if one_hot:
         t_test = change_one_hot_lebel(t_test)
     
