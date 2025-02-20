@@ -38,7 +38,7 @@ while True:
 
     network = Convnetwork(input_size=(list(x_train[0].shape)), output_size=10, dense_layer=layer1, conv_layer=conv_layer1, weightinit=He, activation=Relu, batchnorm=True, toba=True, drop_rate=[0.26,0.33], regularize=["l2",0.0005])
     model = test = Trainer(network, optimizer=opt2, data=data, check=5, scheduler=exp)
-    model.fit(50)
+    model.fit(10)
     model.coco_sort(layer_names)
     for delper in [0.0,0.1,0.2,0.3,0.4,0.5]:
         delete_ns = [int(2048*delper),int(512*delper),int(256*delper),int(128*delper)]
