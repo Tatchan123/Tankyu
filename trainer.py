@@ -9,7 +9,7 @@ import sys
 #from Toba_w import *
 #from Toba import Toba
 #from Toba_w import random_rmw
-from Toba2 import Toba
+from Toba import Toba
 
 class Trainer:
     def __init__(self, model, optimizer, data, check,scheduler=None):
