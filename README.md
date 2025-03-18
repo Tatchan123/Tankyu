@@ -48,7 +48,12 @@
     
 - Toba.py
   - 本研究で考案したTobaの処理を記述
-  - 
+  - `random_toba()`: ランダム削除
+  - `nozero_random_toba()`: 0をもつノードの削除を禁止したランダム削除。ただし、0でないノードをすべて削除してしまった場合、これらのノードも削除する。
+  - `coco_sort()`: それぞれのノード同士の相関性を評価し、相関の強い順にノードの組み合わせをソートする
+  - `prev_coco_sort()`: 処理方法が違うcoco_sort。基本的に`coco_sort()`のほうが高速。
+  - `coco_pick()`: `coco_sort()`: 関数でソートしたものを元にノード削除を実行する。
+  - `zero_include_coco_pick()`: 0をもつノードを優先的に削除するようにした`coco_pick()`
 - trainer.py
   - Optimizerクラス
     - 勾配降下法における最適化手法のクラス
